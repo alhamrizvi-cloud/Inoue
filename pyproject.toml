@@ -1,7 +1,8 @@
 [project]
-name = "stackscan"
+name = "inoue"
 version = "1.0.0"
-description = "Fast tech stack fingerprinting CLI — like Wappalyzer but open source"
+description = "Inoue — fast tech stack fingerprinting CLI"
+authors = ["Alham Rizvi <https://github.com/alhamrizvi-cloud/Inoue>"]
 requires-python = ">=3.10"
 
 [tool.poetry.dependencies]

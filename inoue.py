@@ -1,6 +1,8 @@
 #!/usr/bin/env python3
 """
-inoue - tech stack fingerprinting CLI
+Inoue - tech stack fingerprinting CLI
+Author: Alham Rizvi
+Repository: https://github.com/alhamrizvi-cloud/Inoue
 """
 
 import json
@@ -16,7 +18,7 @@ from rich.progress import Progress, SpinnerColumn, TextColumn
 
 from core.scanner import scan, ScanResult
 
-app = typer.Typer(help="inoue — tech stack fingerprinting CLI", add_completion=False)
+app = typer.Typer(help="Inoue — tech stack fingerprinting CLI", add_completion=False)
 console = Console()
 
 CATEGORY_COLORS = {
@@ -149,7 +151,7 @@ def main(
     no_banner: bool = typer.Option(False, "--no-banner", help="Suppress banner"),
 ):
     """
-    inoue — tech stack fingerprinting CLI
+    Inoue — tech stack fingerprinting CLI
 
     Detect frameworks, CMS, servers, CDN, WAF, analytics and more.
 

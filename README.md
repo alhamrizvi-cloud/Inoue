@@ -1,8 +1,12 @@
 # Inoue
 
-Fast, open-source tech stack fingerprinting CLI — like Wappalyzer/BuiltWith but runs in your terminal, free, and hackable.
+Fast, open-source tech stack fingerprinting CLI — like Wappalyzer or BuiltWith, but runs in your terminal, free, and hackable.
 
 Built for recon, CTF/HTB, bug bounty, and general web surface analysis.
+
+Maintained by Alham Rizvi.
+
+GitHub: https://github.com/alhamrizvi-cloud/Inoue
 
 ---
 
@@ -21,8 +25,8 @@ Built for recon, CTF/HTB, bug bounty, and general web surface analysis.
 ## Install
 
 ```bash
-git clone https://github.com/you/stackscan
-cd stackscan
+git clone https://github.com/alhamrizvi-cloud/Inoue.git
+cd Inoue
 pip install -r requirements.txt
 ```
 
@@ -32,29 +36,29 @@ pip install -r requirements.txt
 
 ```bash
 # Basic scan
-python stackscan.py example.com
+python inoue.py example.com
 
 # Verbose (SSL, DNS, security headers, all response headers)
-python stackscan.py -v target.htb
+python inoue.py -v target.htb
 
 # Show detection evidence for each tech
-python stackscan.py -e https://target.com
+python inoue.py -e https://target.com
 
 # Full recon mode
-python stackscan.py -v -e https://target.com
+python inoue.py -v -e https://target.com
 
 # Scan multiple targets concurrently
-python stackscan.py site1.com site2.com site3.com
+python inoue.py site1.com site2.com site3.com
 
 # JSON output
-python stackscan.py --json target.com
-python stackscan.py --json -o results.json target.com
+python inoue.py --json target.com
+python inoue.py --json -o results.json target.com
 
 # HTB / CTF (fast, no DNS, custom timeout)
-python stackscan.py --no-dns -t 5 10.10.11.55
+python inoue.py --no-dns -t 5 10.10.11.55
 
 # Skip SSL check (for HTTP-only or self-signed targets)
-python stackscan.py --no-ssl http://target.htb
+python inoue.py --no-ssl http://target.htb
 ```
 
 ---
