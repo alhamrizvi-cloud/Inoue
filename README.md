@@ -23,10 +23,9 @@ Repository: https://github.com/alhamrizvi-cloud/Inoue
 - Structured JSON output for automation and reporting
 - Rich CLI output with confidence, version, and evidence hints
 - Extensible signature engine for quickly adding new detections
+  
+<img width="797" height="733" alt="image" src="https://github.com/user-attachments/assets/e2101e22-1391-4056-a98a-d65f1a6f8a5f" />
 
-<img width="941" height="684" alt="image" src="https://github.com/user-attachments/assets/a4c579ae-7b00-43e1-a88f-0541f124e33f" />
-
-<img width="929" height="453" alt="image" src="https://github.com/user-attachments/assets/f15c9e8a-5f12-427b-a72f-d084815bbda8" />
 
 ## Install
 
