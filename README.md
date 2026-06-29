@@ -11,13 +11,14 @@ GitHub: https://github.com/alhamrizvi-cloud/Inoue
 
 ## Features
 
-- 🖥 **Detects Web-Stack technologies** — web servers, CMS, JS frameworks, CDNs, WAFs, analytics, payment providers, and more
-- 🔒 **SSL/TLS inspection** — protocol, cipher, cert issuer, SANs, expiry
-- 🌐 **DNS enumeration** — A, AAAA, MX, NS, TXT, CNAME records
-- 🛡 **Security header audit** — HSTS, CSP, X-Frame-Options, etc.
-- ⚡ **Concurrent scanning** — scan multiple targets in parallel
-- 📄 **JSON output** — pipe into other tools or save to file
-- 🎨 **Rich terminal UI** — color-coded by category with version detection
+- 🖥 **Advanced web-stack fingerprinting** — identifies servers, CMS, frameworks, CDNs, WAFs, analytics, payment providers, and more
+- 🔒 **SSL/TLS inspection** — protocol, cipher, cert issuer, SANs, expiry, and certificate metadata
+- 🌐 **DNS intelligence** — A, AAAA, MX, NS, TXT, and CNAME records for broader recon coverage
+- 🛡 **Security header audit** — checks for HSTS, CSP, X-Frame-Options, and other protective headers
+- ⚡ **Fast parallel scanning** — scan many targets concurrently with configurable worker counts
+- 📄 **Structured JSON output** — save results to files or pipe them into other automation workflows
+- 🎨 **Rich CLI reporting** — color-coded output with confidence levels, versions, and evidence hints
+- 🧠 **Extensible fingerprint engine** — add new detection signatures quickly in the signatures module
 
 ## Install
 
@@ -69,6 +70,7 @@ python inoue.py --no-ssl http://target.htb
 | `--json` | Output as JSON |
 | `-o, --output` | Save JSON to file |
 | `--no-banner` | Suppress ASCII banner |
+| `--api-key` | Optional API key for enrichment services |
 
 ## Categories Detected
 
@@ -86,6 +88,10 @@ python inoue.py --no-ssl http://target.htb
 | Security Headers | HSTS, CSP, X-Frame-Options, X-XSS-Protection |
 | Hosting | Vercel, Netlify, Heroku, GitHub Pages |
 | Payment | Stripe, PayPal |
+
+## Contributing
+
+Contributions are welcome. Please see [CONTRIBUTING.md](CONTRIBUTING.md) for setup and PR guidance.
 
 ## Adding Signatures
 
@@ -123,6 +129,14 @@ Edit `fingerprints/signatures.py`. Each entry follows this schema:
 ```
 
 ---
+
+## Roadmap
+
+Planned improvements include:
+- more fingerprint signatures for modern web stacks
+- extra enrichment sources and version heuristics
+- broader TLS and header analysis
+- better structured reports for recon workflows
 
 ## License
 
