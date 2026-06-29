@@ -1,4 +1,5 @@
 # Inoue
+<img width="1099" height="717" alt="image" src="https://github.com/user-attachments/assets/0dbb322d-781e-42bd-aae4-c3cd793d2df5" />
 
 Fast, open-source tech stack fingerprinting CLI — like Wappalyzer or BuiltWith, but runs in your terminal, free, and hackable.
 
@@ -8,19 +9,15 @@ Maintained by Alham Rizvi.
 
 GitHub: https://github.com/alhamrizvi-cloud/Inoue
 
----
-
 ## Features
 
-- 🖥 **Detects 80+ technologies** — web servers, CMS, JS frameworks, CDNs, WAFs, analytics, payment providers, and more
+- 🖥 **Detects Web-Stack technologies** — web servers, CMS, JS frameworks, CDNs, WAFs, analytics, payment providers, and more
 - 🔒 **SSL/TLS inspection** — protocol, cipher, cert issuer, SANs, expiry
 - 🌐 **DNS enumeration** — A, AAAA, MX, NS, TXT, CNAME records
 - 🛡 **Security header audit** — HSTS, CSP, X-Frame-Options, etc.
 - ⚡ **Concurrent scanning** — scan multiple targets in parallel
 - 📄 **JSON output** — pipe into other tools or save to file
 - 🎨 **Rich terminal UI** — color-coded by category with version detection
-
----
 
 ## Install
 
@@ -29,8 +26,6 @@ git clone https://github.com/alhamrizvi-cloud/Inoue.git
 cd Inoue
 pip install -r requirements.txt
 ```
-
----
 
 ## Usage
 
@@ -61,8 +56,6 @@ python inoue.py --no-dns -t 5 10.10.11.55
 python inoue.py --no-ssl http://target.htb
 ```
 
----
-
 ## Options
 
 | Flag | Description |
@@ -76,8 +69,6 @@ python inoue.py --no-ssl http://target.htb
 | `--json` | Output as JSON |
 | `-o, --output` | Save JSON to file |
 | `--no-banner` | Suppress ASCII banner |
-
----
 
 ## Categories Detected
 
@@ -96,8 +87,6 @@ python inoue.py --no-ssl http://target.htb
 | Hosting | Vercel, Netlify, Heroku, GitHub Pages |
 | Payment | Stripe, PayPal |
 
----
-
 ## Adding Signatures
 
 Edit `fingerprints/signatures.py`. Each entry follows this schema:
@@ -112,8 +101,6 @@ Edit `fingerprints/signatures.py`. Each entry follows this schema:
     "meta":    {"generator": r"pattern"},
 },
 ```
-
----
 
 ## Output Example (JSON)
 
