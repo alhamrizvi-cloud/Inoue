@@ -65,6 +65,8 @@ python inoue.py --no-dns -t 5 10.10.11.55
 python inoue.py --no-ssl http://target.htb
 ```
 
+For a full command reference, see [COMMANDS.md](COMMANDS.md).
+
 ## Options
 
 | Flag | Description |
