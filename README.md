@@ -1,4 +1,4 @@
-# 🔍 stackscan
+# Inoue
 
 Fast, open-source tech stack fingerprinting CLI — like Wappalyzer/BuiltWith but runs in your terminal, free, and hackable.
 
