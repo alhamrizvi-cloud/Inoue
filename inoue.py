@@ -100,16 +100,16 @@ def render_result(result: ScanResult, verbose: bool = False, evidence: bool = Fa
     if verbose and result.enriched:
         console.print("  [dim]── recon ─────────────────────────────[/dim]")
         services = result.enriched.get("services", [])
-        vulnerabilities = result.enriched.get("vulnerabilities", [])
+        service_hints = result.enriched.get("service_hints", [])
         if services:
             console.print("  [cyan]services[/cyan]")
             for item in services[:10]:
                 console.print(f"    - {item['name']} {item['version']} [{item['category']}]")
-        if vulnerabilities:
-            console.print("  [red]vulnerabilities[/red]")
-            for item in vulnerabilities[:10]:
-                console.print(f"    - {item['service']} {item['version']} -> {item['cve']} ({item['summary']})")
-        if not services and not vulnerabilities:
+        if service_hints:
+            console.print("  [yellow]service hints[/yellow]")
+            for item in service_hints[:10]:
+                console.print(f"    - {item['name']} -> {', '.join(item['service_hints'])}")
+        if not services and not service_hints:
             console.print("  [dim]no enrichment data[/dim]")
         console.print()
 
@@ -227,7 +227,7 @@ def main(
                 "dns": r.dns_records,
                 "ssl": r.ssl_info,
                 "recon": r.enriched.get("recon", []) if r.enriched else [],
-                "vulnerabilities": r.enriched.get("vulnerabilities", []) if r.enriched else [],
+                "service_hints": r.enriched.get("service_hints", []) if r.enriched else [],
                 "error": r.error,
             })
         json_str = json.dumps(out, indent=2)

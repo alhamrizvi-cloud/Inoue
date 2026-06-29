@@ -1,6 +1,6 @@
 import unittest
 
-from core.scanner import Detection, ScanResult, build_service_summary, find_vulnerabilities, run_fingerprints
+from core.scanner import Detection, ScanResult, build_service_summary, run_fingerprints
 
 
 class ScannerSummaryTests(unittest.TestCase):
@@ -36,16 +36,51 @@ class ScannerSummaryTests(unittest.TestCase):
         self.assertIn("WordPress", names)
         self.assertEqual(next(d.version for d in detections if d.name == "Nginx"), "1.26.1")
 
-    def test_find_vulnerabilities_returns_cve_hints_for_outdated_versions(self):
-        detections = [
-            Detection(name="Apache", category="Web Server", version="2.4.49"),
-            Detection(name="WordPress", category="CMS", version="6.3.2"),
-        ]
+    def test_run_fingerprints_detects_deeper_service_signatures(self):
+        headers = {"Server": "Apache/2.4.49"}
+        body = '<meta name="generator" content="Jenkins 2.440"><script src="/static/jenkins.js"></script>'
 
-        vulns = find_vulnerabilities(detections)
+        detections = run_fingerprints(headers, {}, body)
+        names = {d.name for d in detections}
 
-        self.assertTrue(any(v["service"] == "Apache" for v in vulns))
-        self.assertTrue(any("CVE" in v["cve"] for v in vulns))
+        self.assertIn("Apache", names)
+        self.assertIn("Jenkins", names)
+
+    def test_run_fingerprints_detects_services_from_url_path(self):
+        headers = {}
+        body = ""
+
+        detections = run_fingerprints(headers, {}, body, url="https://target.example/phpmyadmin/index.php")
+        names = {d.name for d in detections}
+
+        self.assertIn("phpMyAdmin", names)
+
+    def test_run_fingerprints_detects_wordpress_plugin_signatures(self):
+        headers = {}
+        body = '<link rel="stylesheet" href="/wp-content/plugins/elementor/assets/css/frontend.min.css">'
+
+        detections = run_fingerprints(headers, {}, body)
+        names = {d.name for d in detections}
+
+        self.assertIn("Elementor", names)
+
+    def test_run_fingerprints_detects_payment_gateway_signatures(self):
+        headers = {}
+        body = '<script src="https://js.stripe.com/v3"></script>'
+
+        detections = run_fingerprints(headers, {}, body)
+        names = {d.name for d in detections}
+
+        self.assertIn("Stripe", names)
+
+    def test_run_fingerprints_detects_inline_source_code_signatures(self):
+        headers = {}
+        body = '<script>Sentry.init({dsn:"https://example@sentry.io/123"});</script>'
+
+        detections = run_fingerprints(headers, {}, body)
+        names = {d.name for d in detections}
+
+        self.assertIn("Sentry", names)
 
 
 if __name__ == "__main__":
