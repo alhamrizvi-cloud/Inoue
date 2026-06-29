@@ -2272,10 +2272,7 @@ SIGNATURES = {
         "category": "Firewall / Network",
     },
     "Asterisk": {
-        "html": [r'Asterisk', r'asterisk'],
-        "category": "VoIP",
-    },
-    "FreePBX": {
+        "html": [r'Asterisk', r'asterisk']X": {
         "html": [r'FreePBX', r'freepbx'],
         "category": "VoIP",
     },

@@ -2,25 +2,27 @@
 
 <img width="430" height="63" alt="image" src="https://github.com/user-attachments/assets/3ebec879-7fdb-4ee4-9def-277e95b1c406" />
 
+Inoue is a fast, open-source recon-oriented tech stack fingerprinting CLI. It is designed to identify the technologies exposed by a target website or service from the terminal, with a broad signature catalog that covers servers, runtimes, CMS platforms, ecommerce stacks, frameworks, JavaScript libraries, analytics tools, payment providers, admin panels, cloud/self-hosted management surfaces, VPN portals, and IoT/admin devices.
 
-Fast, open-source tech stack fingerprinting CLI — like Wappalyzer or BuiltWith, but runs in your terminal, free, and hackable.
-
-Built for recon, CTF/HTB, bug bounty, and general web surface analysis.
+It is useful for recon, CTF/HTB, bug bounty, internal network review, and general surface analysis.
 
 Maintained by Alham Rizvi.
 
-GitHub: https://github.com/alhamrizvi-cloud/Inoue
+Repository: https://github.com/alhamrizvi-cloud/Inoue
 
 ## Features
 
-- **Advanced web-stack fingerprinting** — identifies servers, CMS, frameworks, CDNs, WAFs, analytics, payment providers, and more
-- **SSL/TLS inspection** — protocol, cipher, cert issuer, SANs, expiry, and certificate metadata
-- **DNS intelligence** — A, AAAA, MX, NS, TXT, and CNAME records for broader recon coverage
-- **Security header audit** — checks for HSTS, CSP, X-Frame-Options, and other protective headers
-- **Fast parallel scanning** — scan many targets concurrently with configurable worker counts
-- **Structured JSON output** — save results to files or pipe them into other automation workflows
-- **Rich CLI reporting** — color-coded output with confidence levels, versions, and evidence hints
-- **Extensible fingerprint engine** — add new detection signatures quickly in the signatures module
+- Broad fingerprint coverage for web servers, languages, frameworks, CMS, ecommerce platforms, JS libraries, analytics, payments, CDNs, WAFs, and more
+- Detection from HTTP headers, cookies, HTML, script tags, meta tags, and URL paths
+- Recon-oriented service hints for exposed admin panels, management consoles, cloud portals, and self-hosted applications
+- Version-aware detection where the signature supports it
+- SSL/TLS inspection with certificate metadata and handshake details
+- DNS intelligence for A, AAAA, MX, NS, TXT, and CNAME records
+- Security header auditing for HSTS, CSP, X-Frame-Options, and related protections
+- Parallel scanning for multiple targets with configurable worker count
+- Structured JSON output for automation and reporting
+- Rich CLI output with confidence, version, and evidence hints
+- Extensible signature engine for quickly adding new detections
 
 <img width="941" height="684" alt="image" src="https://github.com/user-attachments/assets/a4c579ae-7b00-43e1-a88f-0541f124e33f" />
 
@@ -40,13 +42,13 @@ pip install -r requirements.txt
 # Basic scan
 python inoue.py example.com
 
-# Verbose (SSL, DNS, security headers, all response headers)
+# Verbose scan with SSL, DNS, headers, and security inspection
 python inoue.py -v target.htb
 
-# Show detection evidence for each tech
+# Show the evidence behind each detection
 python inoue.py -e https://target.com
 
-# Full recon mode
+# Full recon-style scan
 python inoue.py -v -e https://target.com
 
 # Scan multiple targets concurrently
@@ -56,10 +58,10 @@ python inoue.py site1.com site2.com site3.com
 python inoue.py --json target.com
 python inoue.py --json -o results.json target.com
 
-# HTB / CTF (fast, no DNS, custom timeout)
+# Fast HTB/CTF style scan without DNS
 python inoue.py --no-dns -t 5 10.10.11.55
 
-# Skip SSL check (for HTTP-only or self-signed targets)
+# Skip SSL checks for HTTP-only or self-signed targets
 python inoue.py --no-ssl http://target.htb
 ```
 
@@ -67,54 +69,67 @@ python inoue.py --no-ssl http://target.htb
 
 | Flag | Description |
 |------|-------------|
-| `-v, --verbose` | Show SSL info, DNS records, security headers, all headers |
-| `-e, --evidence` | Show what triggered each detection |
+| `-v, --verbose` | Show SSL info, DNS records, security headers, and response headers |
+| `-e, --evidence` | Show the evidence that triggered each detection |
 | `--no-dns` | Skip DNS enumeration |
 | `--no-ssl` | Skip SSL/TLS inspection |
 | `-t, --timeout` | HTTP timeout in seconds (default: 10) |
 | `-w, --workers` | Concurrent scan threads (default: 5) |
-| `--json` | Output as JSON |
-| `-o, --output` | Save JSON to file |
-| `--no-banner` | Suppress ASCII banner |
+| `--json` | Output results as JSON |
+| `-o, --output` | Save JSON to a file |
+| `--no-banner` | Suppress the ASCII banner |
 | `--api-key` | Optional API key for enrichment services |
 
-## Categories Detected
+## What it can identify
 
-| Category | Examples |
-|----------|---------|
-| Web Server | Apache, Nginx, IIS, LiteSpeed, Caddy |
-| Language | PHP, ASP.NET, Node.js, Python |
-| Framework | Laravel, Django, Flask, Express, Spring, Next.js, Nuxt |
-| CMS | WordPress, Drupal, Joomla, Ghost |
-| E-Commerce | Magento, Shopify |
-| JS Framework | React, Vue, Angular, Svelte, Next.js |
-| CDN | Cloudflare, AWS CloudFront, Fastly, Akamai, Varnish |
-| WAF | Cloudflare WAF, AWS WAF, Sucuri, Imperva, ModSecurity |
-| Analytics | Google Analytics, GTM, Hotjar, Matomo, Plausible |
-| Security Headers | HSTS, CSP, X-Frame-Options, X-XSS-Protection |
-| Hosting | Vercel, Netlify, Heroku, GitHub Pages |
-| Payment | Stripe, PayPal |
+Inoue is built around a large signature catalog and can surface technologies across categories such as:
+
+- Web servers: Apache, Nginx, IIS, LiteSpeed, Caddy, Tomcat, OpenResty
+- Languages and runtimes: PHP, ASP.NET, Node.js, Python, Ruby on Rails, Java, Go
+- Frameworks: Laravel, Django, Flask, Express.js, Spring, Symfony, FastAPI, Next.js, React, Vue, Angular
+- CMS and ecommerce: WordPress, Drupal, Joomla, Magento, Shopify, PrestaShop, OpenCart, Ghost
+- Analytics and marketing: Google Analytics, Tag Manager, Hotjar, Matomo, Plausible, Segment, Mixpanel
+- Payments: Stripe, PayPal, Braintree, Authorize.Net, Square, Adyen, Paddle
+- CDNs and security: Cloudflare, CloudFront, Fastly, Akamai, Varnish, WAF products
+- Admin and management panels: phpMyAdmin, Adminer, pgAdmin, Webmin, Portainer, Jenkins, GitLab, Jira, Confluence, Webmin, and more
+- Cloud and self-hosted infrastructure: OpenStack, OpenShift, Proxmox, oVirt, CloudStack, Rancher, Harbor, Nextcloud, OwnCloud
+- VPN and remote access: OpenVPN, WireGuard, Tailscale, pfSense, OPNsense, FortiGate, UniFi, MikroTik
+- IoT and appliance surfaces: Home Assistant, OpenHAB, Synology DSM, QNAP QTS, TrueNAS, routers, cameras, and printer web consoles
+
+## How detection works
+
+The scanner evaluates several signal sources in order:
+
+- HTTP response headers
+- Cookies
+- HTML body content
+- Script tags and referenced assets
+- Meta tags
+- URL paths and common login/admin routes
+
+Each detection is enriched with a confidence level, version hint when available, and evidence from the matched signal.
 
 ## Contributing
 
 Contributions are welcome. Please see [CONTRIBUTING.md](CONTRIBUTING.md) for setup and PR guidance.
 
-## Adding Signatures
+## Adding signatures
 
-Edit `fingerprints/signatures.py`. Each entry follows this schema:
+Edit [fingerprints/signatures.py](fingerprints/signatures.py). Each entry follows this schema:
 
 ```python
 "TechName": {
     "category": "Framework",
     "headers": {"Header-Name": r"regex(with optional (version) group)"},
     "cookies": [r"cookie_name_pattern"],
-    "html":    [r"pattern in response body"],
+    "html": [r"pattern in response body"],
     "scripts": [r"pattern in <script src=...>"],
-    "meta":    {"generator": r"pattern"},
+    "meta": {"generator": r"pattern"},
+    "paths": [r"/common/admin/path"],
 },
 ```
 
-## Output Example (JSON)
+## Example JSON output
 
 ```json
 [
@@ -128,22 +143,20 @@ Edit `fingerprints/signatures.py`. Each entry follows this schema:
       {"name": "Nginx", "category": "Web Server", "version": "1.24.0", "evidence": "Server: nginx/1.24.0"},
       {"name": "WordPress", "category": "CMS", "version": "6.5", "evidence": "Meta generator: WordPress 6.5"}
     ],
-    "ssl": { "protocol": "TLSv1.3", "cipher": "TLS_AES_256_GCM_SHA384", ... },
-    "dns": { "A": ["1.2.3.4"], "MX": ["mail.target.com"] }
+    "ssl": {"protocol": "TLSv1.3", "cipher": "TLS_AES_256_GCM_SHA384"},
+    "dns": {"A": ["1.2.3.4"], "MX": ["mail.target.com"]}
   }
 ]
 ```
 
----
-
 ## Roadmap
 
 Planned improvements include:
-- more fingerprint signatures for modern web stacks
-- extra enrichment sources and version heuristics
-- broader TLS and header analysis
+- more signature coverage for modern web stacks
+- broader version heuristics and enrichment sources
+- deeper TLS and header analysis
 - better structured reports for recon workflows
 
 ## License
 
-MIT — go build something cool.
+MIT.
