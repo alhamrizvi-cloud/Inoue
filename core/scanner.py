@@ -15,6 +15,74 @@ import httpx
 
 from fingerprints.signatures import SIGNATURES
 
+VULNERABILITY_DB = {
+    "Apache": [
+        {"cve": "CVE-2021-41773", "summary": "Path traversal in Apache HTTP Server mod_proxy", "fixed_in": "2.4.50"},
+        {"cve": "CVE-2021-44224", "summary": "HTTP request smuggling via mod_proxy", "fixed_in": "2.4.51"},
+    ],
+    "Nginx": [
+        {"cve": "CVE-2023-44487", "summary": "HTTP/2 rapid reset vulnerability", "fixed_in": "1.25.1"},
+        {"cve": "CVE-2021-23017", "summary": "Off-by-one in ngx_http_range_module", "fixed_in": "1.20.1"},
+    ],
+    "OpenSSH": [
+        {"cve": "CVE-2024-6387", "summary": "Signal handler race condition in OpenSSH", "fixed_in": "9.6p1"},
+    ],
+    "PHP": [
+        {"cve": "CVE-2024-5458", "summary": "PHP CGI argument injection issue", "fixed_in": "8.2.17"},
+    ],
+    "WordPress": [
+        {"cve": "CVE-2024-28000", "summary": "WordPress core privilege escalation risk", "fixed_in": "6.4.3"},
+    ],
+    "Drupal": [
+        {"cve": "CVE-2023-6063", "summary": "Drupal core arbitrary file upload issue", "fixed_in": "10.2.1"},
+    ],
+    "Joomla": [
+        {"cve": "CVE-2023-23752", "summary": "Joomla access bypass vulnerability", "fixed_in": "4.4.6"},
+    ],
+    "Tomcat": [
+        {"cve": "CVE-2024-50379", "summary": "Apache Tomcat request smuggling risk", "fixed_in": "9.0.95"},
+    ],
+    "Elasticsearch": [
+        {"cve": "CVE-2024-23454", "summary": "Elasticsearch remote code execution risk", "fixed_in": "8.11.3"},
+    ],
+    "Redis": [
+        {"cve": "CVE-2023-41056", "summary": "Redis Lua sandbox escape risk", "fixed_in": "7.2.4"},
+    ],
+    "PostgreSQL": [
+        {"cve": "CVE-2024-0985", "summary": "PostgreSQL privilege escalation issue", "fixed_in": "16.4"},
+    ],
+    "MySQL": [
+        {"cve": "CVE-2023-22102", "summary": "MySQL privilege escalation vulnerability", "fixed_in": "8.0.34"},
+    ],
+    "MongoDB": [
+        {"cve": "CVE-2024-1014", "summary": "MongoDB authentication bypass risk", "fixed_in": "7.0.12"},
+    ],
+    "RabbitMQ": [
+        {"cve": "CVE-2023-46118", "summary": "RabbitMQ credential exposure risk", "fixed_in": "3.12.0"},
+    ],
+    "Prometheus": [
+        {"cve": "CVE-2023-45288", "summary": "Prometheus remote query exposure risk", "fixed_in": "2.46.0"},
+    ],
+    "Grafana": [
+        {"cve": "CVE-2023-2801", "summary": "Grafana privilege escalation risk", "fixed_in": "9.3.0"},
+    ],
+    "GitLab": [
+        {"cve": "CVE-2023-7028", "summary": "GitLab password reset vulnerability", "fixed_in": "16.7.7"},
+    ],
+    "Jira": [
+        {"cve": "CVE-2023-22515", "summary": "Atlassian Jira privilege escalation issue", "fixed_in": "8.20.29"},
+    ],
+    "Confluence": [
+        {"cve": "CVE-2023-22518", "summary": "Atlassian Confluence template injection issue", "fixed_in": "8.5.2"},
+    ],
+    "OpenSSL": [
+        {"cve": "CVE-2023-2650", "summary": "OpenSSL policy processing issue", "fixed_in": "3.0.12"},
+    ],
+    "Node.js": [
+        {"cve": "CVE-2024-21890", "summary": "Node.js HTTP request smuggling risk", "fixed_in": "20.11.1"},
+    ],
+}
+
 
 @dataclass
 class Detection:
@@ -178,6 +246,60 @@ def build_service_summary(result: ScanResult) -> list[dict]:
     return summary
 
 
+def _normalize_version(version: Optional[str]) -> tuple[int, ...]:
+    if not version:
+        return (0,)
+    digits = re.findall(r"\d+", str(version))
+    return tuple(int(part) for part in digits) if digits else (0,)
+
+
+def _compare_versions(left: tuple[int, ...], right: tuple[int, ...]) -> int:
+    max_len = max(len(left), len(right))
+    left_padded = left + (0,) * (max_len - len(left))
+    right_padded = right + (0,) * (max_len - len(right))
+    if left_padded < right_padded:
+        return -1
+    if left_padded > right_padded:
+        return 1
+    return 0
+
+
+def find_vulnerabilities(detections: list[Detection]) -> list[dict]:
+    findings = []
+    for detection in detections:
+        service = detection.name
+        version = detection.version
+        if not version:
+            continue
+        for entry in VULNERABILITY_DB.get(service, []):
+            fixed_in = entry.get("fixed_in")
+            if fixed_in and _compare_versions(_normalize_version(version), _normalize_version(fixed_in)) < 0:
+                findings.append({
+                    "service": service,
+                    "version": version,
+                    "cve": entry.get("cve", "unknown"),
+                    "summary": entry.get("summary", "Known vulnerable version"),
+                    "fixed_in": fixed_in,
+                })
+    return findings
+
+
+def build_recon_summary(result: ScanResult) -> list[dict]:
+    services = []
+    for tech in result.technologies:
+        services.append({
+            "name": tech.name,
+            "category": tech.category,
+            "version": tech.version or "unknown",
+            "confidence": tech.confidence,
+            "evidence": tech.evidence,
+            "vulnerabilities": [
+                v for v in find_vulnerabilities([tech])
+            ],
+        })
+    return services
+
+
 def _enrich_with_external_services(hostname: str, technology_names: list[str], api_key: Optional[str] = None) -> dict:
     if not api_key:
         return {}
@@ -229,10 +351,16 @@ def run_fingerprints(headers: dict, cookies: dict, body: str) -> list[Detection]
                 matched, version, evidence = True, m_ver, m_ev
 
         if matched:
+            confidence = "high"
+            if not h_match and not c_match and not b_match and not s_match and not m_match:
+                confidence = "low"
+            elif not h_match and not c_match:
+                confidence = "medium"
             detections.append(Detection(
                 name=tech_name,
                 category=category,
                 version=version,
+                confidence=confidence,
                 evidence=evidence,
             ))
 
@@ -304,6 +432,11 @@ def scan(
         return result
 
     result.ip = _resolve_ip(hostname)
+    result.enriched = {
+        "services": build_service_summary(result),
+        "recon": build_recon_summary(result),
+        "vulnerabilities": find_vulnerabilities(result.technologies),
+    }
 
     if dns:
         result.dns_records = _get_dns(hostname)
@@ -313,6 +446,8 @@ def scan(
         result.ssl_info = _get_ssl_info(final_parsed.hostname or hostname)
 
     if hostname:
-        result.enriched = _enrich_with_external_services(hostname, [tech.name for tech in result.technologies], api_key)
+        external = _enrich_with_external_services(hostname, [tech.name for tech in result.technologies], api_key)
+        if external:
+            result.enriched.update(external)
 
     return result

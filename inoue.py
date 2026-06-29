@@ -98,9 +98,19 @@ def render_result(result: ScanResult, verbose: bool = False, evidence: bool = Fa
         console.print("  [dim]no technologies detected[/dim]\n")
 
     if verbose and result.enriched:
-        console.print("  [dim]── enrichment ─────────────────────────[/dim]")
-        for key, value in result.enriched.items():
-            console.print(f"  [cyan]{key}[/cyan]: {value}")
+        console.print("  [dim]── recon ─────────────────────────────[/dim]")
+        services = result.enriched.get("services", [])
+        vulnerabilities = result.enriched.get("vulnerabilities", [])
+        if services:
+            console.print("  [cyan]services[/cyan]")
+            for item in services[:10]:
+                console.print(f"    - {item['name']} {item['version']} [{item['category']}]")
+        if vulnerabilities:
+            console.print("  [red]vulnerabilities[/red]")
+            for item in vulnerabilities[:10]:
+                console.print(f"    - {item['service']} {item['version']} -> {item['cve']} ({item['summary']})")
+        if not services and not vulnerabilities:
+            console.print("  [dim]no enrichment data[/dim]")
         console.print()
 
     if result.ssl_info and not result.ssl_info.get("error") and verbose:
@@ -216,6 +226,8 @@ def main(
                 ],
                 "dns": r.dns_records,
                 "ssl": r.ssl_info,
+                "recon": r.enriched.get("recon", []) if r.enriched else [],
+                "vulnerabilities": r.enriched.get("vulnerabilities", []) if r.enriched else [],
                 "error": r.error,
             })
         json_str = json.dumps(out, indent=2)
