@@ -13,14 +13,18 @@ GitHub: https://github.com/alhamrizvi-cloud/Inoue
 
 ## Features
 
-- 🖥 **Advanced web-stack fingerprinting** — identifies servers, CMS, frameworks, CDNs, WAFs, analytics, payment providers, and more
-- 🔒 **SSL/TLS inspection** — protocol, cipher, cert issuer, SANs, expiry, and certificate metadata
-- 🌐 **DNS intelligence** — A, AAAA, MX, NS, TXT, and CNAME records for broader recon coverage
-- 🛡 **Security header audit** — checks for HSTS, CSP, X-Frame-Options, and other protective headers
-- ⚡ **Fast parallel scanning** — scan many targets concurrently with configurable worker counts
-- 📄 **Structured JSON output** — save results to files or pipe them into other automation workflows
-- 🎨 **Rich CLI reporting** — color-coded output with confidence levels, versions, and evidence hints
-- 🧠 **Extensible fingerprint engine** — add new detection signatures quickly in the signatures module
+- **Advanced web-stack fingerprinting** — identifies servers, CMS, frameworks, CDNs, WAFs, analytics, payment providers, and more
+- **SSL/TLS inspection** — protocol, cipher, cert issuer, SANs, expiry, and certificate metadata
+- **DNS intelligence** — A, AAAA, MX, NS, TXT, and CNAME records for broader recon coverage
+- **Security header audit** — checks for HSTS, CSP, X-Frame-Options, and other protective headers
+- **Fast parallel scanning** — scan many targets concurrently with configurable worker counts
+- **Structured JSON output** — save results to files or pipe them into other automation workflows
+- **Rich CLI reporting** — color-coded output with confidence levels, versions, and evidence hints
+- **Extensible fingerprint engine** — add new detection signatures quickly in the signatures module
+
+<img width="941" height="684" alt="image" src="https://github.com/user-attachments/assets/a4c579ae-7b00-43e1-a88f-0541f124e33f" />
+
+<img width="929" height="453" alt="image" src="https://github.com/user-attachments/assets/f15c9e8a-5f12-427b-a72f-d084815bbda8" />
 
 ## Install
 
