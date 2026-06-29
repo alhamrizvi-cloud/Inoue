@@ -665,6 +665,55 @@ SIGNATURES = {
         "headers": {"CF-Ray": r".+", "Server": r"cloudflare"},
         "category": "CDN / Security",
     },
+    "Cloudflare Turnstile": {
+        "html": [r'turnstile', r'cf-turnstile'],
+        "category": "Security",
+    },
+    "Fastly": {
+        "headers": {"Fastly-Debug-Digest": r".+", "X-Served-By": r"cache-"},
+        "category": "CDN",
+    },
+    "Akamai": {
+        "headers": {"X-Akamai-Transformed": r".+", "X-Check-Cacheable": r".+"},
+        "category": "CDN",
+    },
+    "BunnyCDN": {
+        "html": [r'bunnycdn', r'b-cdn.net'],
+        "category": "CDN",
+    },
+    "jsDelivr": {
+        "html": [r'jsdelivr', r'cdn.jsdelivr.net'],
+        "category": "CDN",
+    },
+    "unpkg": {
+        "html": [r'unpkg', r'unpkg.com'],
+        "category": "CDN",
+    },
+    "cdnjs": {
+        "html": [r'cdnjs', r'cdnjs.cloudflare.com'],
+        "category": "CDN",
+    },
+    "AWS": {
+        "headers": {"x-amz-request-id": r".+", "x-amz-id-2": r".+"},
+        "html": [r'amazonaws\.com', r'awsstatic'],
+        "category": "Cloud",
+    },
+    "Google Cloud": {
+        "html": [r'cloud\.google\.com', r'storage\.googleapis\.com'],
+        "category": "Cloud",
+    },
+    "Heroku": {
+        "html": [r'herokuapp\.com', r'heroku'],
+        "category": "Cloud",
+    },
+    "DigitalOcean": {
+        "html": [r'digitalocean', r'digitaloceanspaces\.com'],
+        "category": "Cloud",
+    },
+    "Vercel": {
+        "html": [r'vercel\.app', r'_next', r'vercel'],
+        "category": "Cloud",
+    },
     "Cloudflare Pages": {
         "headers": {"Server": r"cloudflare"},
         "html": [r'cloudflarepages', r'pages.dev'],
@@ -752,6 +801,83 @@ SIGNATURES = {
         "scripts": [r'google-analytics\.com', r'googletagmanager\.com'],
         "category": "Analytics",
     },
+    "Google Tag Manager": {
+        "html": [r'googletagmanager\.com/gtm\.js', r'GTM-[A-Z0-9]+'],
+        "scripts": [r'googletagmanager\.com'],
+        "category": "Analytics",
+    },
+    "Meta Pixel": {
+        "html": [r'fbq\(', r'facebook\.com/tr'],
+        "scripts": [r'connect\.facebook\.net'],
+        "category": "Marketing",
+    },
+    "TikTok Pixel": {
+        "html": [r'ttq\.track', r'tiktok\.com'],
+        "scripts": [r'analytics\.tiktok\.com'],
+        "category": "Marketing",
+    },
+    "HubSpot": {
+        "html": [r'hs-scripts\.com', r'hubspot'],
+        "scripts": [r'hs-scripts\.com'],
+        "category": "Marketing",
+    },
+    "Mailchimp": {
+        "html": [r'mailchimp', r'mc-embed'],
+        "category": "Marketing",
+    },
+    "Pardot": {
+        "html": [r'pardot', r'piwik\.tracking'],
+        "category": "Marketing",
+    },
+    "Customer.io": {
+        "html": [r'customer\.io', r'customerio'],
+        "category": "Marketing",
+    },
+    "Google Tag Manager": {
+        "html": [r'googletagmanager\.com/gtm\.js', r'GTM-[A-Z0-9]+'],
+        "scripts": [r'googletagmanager\.com'],
+        "category": "Analytics",
+    },
+    "Meta Pixel": {
+        "html": [r'fbq\(', r'facebook\.com/tr'],
+        "scripts": [r'connect\.facebook\.net'],
+        "category": "Marketing",
+    },
+    "TikTok Pixel": {
+        "html": [r'ttq\.track', r'tiktok\.com'],
+        "scripts": [r'analytics\.tiktok\.com'],
+        "category": "Marketing",
+    },
+    "Hotjar": {
+        "html": [r'hotjar\.com', r'hjid:', r'hjsv:'],
+        "scripts": [r'hotjar\.com'],
+        "category": "Analytics",
+    },
+    "Mixpanel": {
+        "html": [r'mixpanel', r'mixpanel\.com'],
+        "category": "Analytics",
+    },
+    "Segment": {
+        "html": [r'segment\.com', r'analytics\.js'],
+        "category": "Analytics",
+    },
+    "HubSpot": {
+        "html": [r'hs-scripts\.com', r'hubspot'],
+        "scripts": [r'hs-scripts\.com'],
+        "category": "Marketing",
+    },
+    "Mailchimp": {
+        "html": [r'mailchimp', r'mc-embed'],
+        "category": "Marketing",
+    },
+    "Pardot": {
+        "html": [r'piwik\.tracking', r'pardot'],
+        "category": "Marketing",
+    },
+    "Customer.io": {
+        "html": [r'customer\.io', r'customerio'],
+        "category": "Marketing",
+    },
     "Adobe Analytics": {
         "html": [r's_code\.js', r'satelliteLib', r'AppMeasurement'],
         "category": "Analytics",
@@ -834,6 +960,28 @@ SIGNATURES = {
         "headers": {"X-Vercel-Id": r".+", "Server": r"Vercel"},
         "category": "Hosting",
     },
+    "AWS": {
+        "headers": {"x-amz-request-id": r".+", "x-amz-id-2": r".+"},
+        "html": [r'amazonaws\.com', r'awsstatic'],
+        "category": "Cloud",
+    },
+    "Google Cloud": {
+        "html": [r'cloud\.google\.com', r'storage\.googleapis\.com'],
+        "category": "Cloud",
+    },
+    "Heroku": {
+        "headers": {"Via": r"1\.1 vegur"},
+        "html": [r'herokuapp\.com', r'heroku'],
+        "category": "Cloud",
+    },
+    "DigitalOcean": {
+        "html": [r'digitalocean', r'digitaloceanspaces\.com'],
+        "category": "Cloud",
+    },
+    "Netlify": {
+        "headers": {"X-Nf-Request-Id": r".+", "Server": r"Netlify"},
+        "category": "Hosting",
+    },
     "Netlify": {
         "headers": {"X-Nf-Request-Id": r".+", "Server": r"Netlify"},
         "category": "Hosting",
@@ -852,6 +1000,96 @@ SIGNATURES = {
         "html": [r'js\.stripe\.com', r'Stripe\('],
         "scripts": [r'js\.stripe\.com'],
         "category": "Payment",
+    },
+    "PayPal": {
+        "html": [r'paypal\.com/sdk', r'paypalobjects\.com'],
+        "category": "Payment",
+    },
+    "Klarna": {
+        "html": [r'klarna', r'klarna\.com'],
+        "category": "Payment",
+    },
+    "Apple Pay": {
+        "html": [r'apple-pay', r'paymentrequest'],
+        "category": "Payment",
+    },
+    "Shopify": {
+        "html": [r'cdn\.shopify\.com', r'shopify', r'Shopify\.theme'],
+        "scripts": [r'cdn\.shopify\.com'],
+        "category": "E-Commerce",
+    },
+    "ReCharge": {
+        "html": [r'recharge', r'rechargeapps\.com'],
+        "category": "E-Commerce",
+    },
+    "Bold Commerce": {
+        "html": [r'bold\.commerce', r'boldapps'],
+        "category": "E-Commerce",
+    },
+    "Skio": {
+        "html": [r'skio', r'skiopages'],
+        "category": "E-Commerce",
+    },
+    "ShipStation": {
+        "html": [r'shipstation', r'shipstation\.com'],
+        "category": "Fulfillment",
+    },
+    "ShipBob": {
+        "html": [r'shipbob', r'shipbob\.com'],
+        "category": "Fulfillment",
+    },
+    "Easyship": {
+        "html": [r'easyship', r'easyship\.com'],
+        "category": "Fulfillment",
+    },
+    "Zendesk": {
+        "html": [r'zendesk', r'zendesk\.com'],
+        "category": "CRM",
+    },
+    "Intercom": {
+        "html": [r'intercom', r'intercom\.io'],
+        "category": "CRM",
+    },
+    "Salesforce": {
+        "html": [r'salesforce', r'force\.com'],
+        "category": "CRM",
+    },
+    "Pipedrive": {
+        "html": [r'pipedrive', r'pipedrive\.com'],
+        "category": "CRM",
+    },
+    "Drift": {
+        "html": [r'drift', r'drift\.com'],
+        "category": "CRM",
+    },
+    "Calendly": {
+        "html": [r'calendly', r'calendly\.com'],
+        "category": "Scheduling",
+    },
+    "Typeform": {
+        "html": [r'typeform', r'typeform\.com'],
+        "category": "Forms",
+    },
+    "Jotform": {
+        "html": [r'jotform', r'jotform\.com'],
+        "category": "Forms",
+    },
+    "Magento": {
+        "html": [r'Mage\.', r'/skin/frontend/', r'var BLANK_URL'],
+        "cookies": [r'frontend'],
+        "category": "E-Commerce",
+    },
+    "BigCommerce": {
+        "html": [r'bigcommerce', r'cdn\.bigcommerce'],
+        "category": "E-Commerce",
+    },
+    "PrestaShop": {
+        "html": [r'prestashop', r'PrestaShop'],
+        "category": "E-Commerce",
+    },
+    "OpenCart": {
+        "html": [r'opencart', r'OpenCart'],
+        "category": "E-Commerce",
     },
     "PayPal": {
         "html": [r'paypal\.com/sdk', r'paypalobjects\.com'],
@@ -1168,6 +1406,16 @@ SIGNATURES = {
         "paths": [r'/openwebui', r'/auth/login'],
         "category": "Admin Panel",
     },
+    "Uptime Kuma": {
+        "html": [r'Uptime Kuma', r'uptime-kuma'],
+        "paths": [r'/status', r'/dashboard'],
+        "category": "Monitoring",
+    },
+    "Kasm Workspaces": {
+        "html": [r'Kasm Workspaces', r'kasm'],
+        "paths": [r'/login', r'/#/login'],
+        "category": "Admin Panel",
+    },
     "Portainer": {
         "html": [r'Portainer', r'portainer'],
         "paths": [r'/portainer', r'/#!/auth'],
@@ -1378,7 +1626,8 @@ SIGNATURES = {
         "category": "Marketing",
     },
     "HubSpot": {
-        "html": [r'hubspot', r'hubspotusercontent'],
+        "html": [r'hubspot', r'hubspotusercontent', r'hs-scripts\.com', r'hs-analytics'],
+        "scripts": [r'hs-scripts\.com', r'hubspot'],
         "category": "Marketing",
     },
     "Mailchimp": {
@@ -2272,7 +2521,10 @@ SIGNATURES = {
         "category": "Firewall / Network",
     },
     "Asterisk": {
-        "html": [r'Asterisk', r'asterisk']X": {
+        "html": [r'Asterisk', r'asterisk'],
+        "category": "VoIP",
+    },
+    "FreePBX": {
         "html": [r'FreePBX', r'freepbx'],
         "category": "VoIP",
     },

@@ -43,14 +43,26 @@ class ScanResult:
 
 
 def _extract_version(pattern: str, text: str) -> Optional[str]:
-    """Try to pull a version string from a regex match group 1."""
+    """Try to pull a version string from a regex match group 1 or from nearby version-like text."""
     try:
         m = re.search(pattern, text, re.IGNORECASE)
         if m:
             try:
-                return m.group(1) if m.lastindex else None
+                if m.lastindex:
+                    value = m.group(1)
+                    if value:
+                        return value
             except IndexError:
-                return None
+                pass
+
+        version_matches = re.findall(r'(?:v|version|ver|release)?(?:\s|=|/)?(\d+(?:[._-]?\d+){1,3})', text)
+        if version_matches:
+            return version_matches[0].replace('_', '.').replace('-', '.')
+
+        # also catch common version tokens embedded in URLs or snippets
+        url_version_matches = re.findall(r'/(?:v|version|ver|release)?(?:[._-])?(\d+(?:[._-]?\d+){1,3})', text)
+        if url_version_matches:
+            return url_version_matches[0].replace('_', '.').replace('-', '.')
     except re.error:
         pass
     return None
@@ -79,7 +91,8 @@ def _match_html(sig: dict, body: str) -> tuple[bool, Optional[str], str]:
         m = re.search(pattern, body, re.IGNORECASE)
         if m:
             snippet = body[max(0, m.start()-20):m.end()+20].strip().replace("\n", " ")
-            return True, None, f"HTML: …{snippet[:60]}…"
+            version = _extract_version(pattern, body[m.start():m.end() + 80])
+            return True, version, f"HTML: …{snippet[:60]}…"
     return False, None, ""
 
 
@@ -93,6 +106,8 @@ def _match_scripts(sig: dict, scripts: list[str]) -> tuple[bool, Optional[str], 
                     version = m.group(1) if m.lastindex else None
                 except IndexError:
                     pass
+                if not version:
+                    version = _extract_version(pattern, src)
                 return True, version, f"Script: {src[:80]}"
     return False, None, ""
 
@@ -237,44 +252,56 @@ def run_fingerprints(headers: dict, cookies: dict, body: str, url: str = "") -> 
 
     for tech_name, sig in SIGNATURES.items():
         category = sig.get("category", "Other")
-        matched, version, evidence = False, None, ""
+        matched = False
+        version = None
+        evidence = ""
+        confidence = "low"
+        candidates = []
 
         h_match, h_ver, h_ev = _match_headers(sig, headers)
         if h_match:
-            matched, version, evidence = True, h_ver, h_ev
+            candidates.append((4, h_ver, h_ev))
 
-        if not matched:
-            c_match, c_ev = _match_cookies(sig, cookies)
-            if c_match:
-                matched, evidence = True, c_ev
+        m_match, m_ver, m_ev = _match_meta(sig, meta)
+        if m_match:
+            candidates.append((3, m_ver, m_ev))
 
-        if not matched:
-            b_match, b_ver, b_ev = _match_html(sig, body)
-            if b_match:
-                matched, version, evidence = True, b_ver, b_ev
+        s_match, s_ver, s_ev = _match_scripts(sig, scripts)
+        if s_match:
+            candidates.append((2, s_ver, s_ev))
 
-        if not matched:
-            s_match, s_ver, s_ev = _match_scripts(sig, scripts)
-            if s_match:
-                matched, version, evidence = True, s_ver, s_ev
+        b_match, b_ver, b_ev = _match_html(sig, body)
+        if b_match:
+            candidates.append((1, b_ver, b_ev))
 
-        if not matched:
-            m_match, m_ver, m_ev = _match_meta(sig, meta)
-            if m_match:
-                matched, version, evidence = True, m_ver, m_ev
+        c_match, c_ev = _match_cookies(sig, cookies)
+        if c_match:
+            candidates.append((0, None, c_ev))
 
-        if not matched and path:
+        if path:
             for pattern in sig.get("paths", []):
                 if re.search(pattern, path, re.IGNORECASE):
-                    matched, evidence = True, f"Path: {path}"
+                    candidates.append((0, None, f"Path: {path}"))
                     break
 
-        if matched:
-            confidence = "high"
-            if not h_match and not c_match and not b_match and not s_match and not m_match:
-                confidence = "low"
-            elif not h_match and not c_match:
+        if candidates:
+            matched = True
+            best_rank, best_version, best_evidence = max(candidates, key=lambda item: item[0])
+            version = best_version
+            evidence = best_evidence
+
+            if best_rank >= 4:
+                confidence = "high"
+            elif best_rank >= 3:
+                confidence = "high"
+            elif best_rank >= 2:
                 confidence = "medium"
+            elif best_rank >= 1:
+                confidence = "medium"
+            else:
+                confidence = "low"
+
+        if matched:
             detections.append(Detection(
                 name=tech_name,
                 category=category,

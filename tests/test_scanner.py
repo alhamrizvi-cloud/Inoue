@@ -82,6 +82,27 @@ class ScannerSummaryTests(unittest.TestCase):
 
         self.assertIn("Sentry", names)
 
+    def test_run_fingerprints_extracts_versions_from_html_and_scripts(self):
+        headers = {}
+        body = '<meta name="generator" content="WordPress 6.5.1"><script src="/wp-content/plugins/elementor/assets/js/frontend.min.js?v=3.23.0"></script>'
+
+        detections = run_fingerprints(headers, {}, body)
+        versions = {d.name: d.version for d in detections if d.version}
+
+        self.assertEqual(versions.get("WordPress"), "6.5.1")
+        self.assertEqual(versions.get("Elementor"), "3.23.0")
+
+    def test_run_fingerprints_detects_ecommerce_and_marketing_signatures(self):
+        headers = {}
+        body = '<script src="https://js.stripe.com/v3"></script><script src="https://www.googletagmanager.com/gtag/js?id=G-ABC123"></script><script src="https://js.hs-scripts.com/123456.js"></script>'
+
+        detections = run_fingerprints(headers, {}, body)
+        names = {d.name for d in detections}
+
+        self.assertIn("Stripe", names)
+        self.assertIn("Google Analytics", names)
+        self.assertIn("HubSpot", names)
+
 
 if __name__ == "__main__":
     unittest.main()
