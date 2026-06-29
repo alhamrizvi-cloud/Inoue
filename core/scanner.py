@@ -2,6 +2,7 @@
 Core scanning engine - fetches target and runs all detections concurrently.
 """
 
+import os
 import re
 import socket
 import ssl
@@ -37,6 +38,7 @@ class ScanResult:
     dns_records: dict = field(default_factory=dict)
     ssl_info: dict = field(default_factory=dict)
     error: Optional[str] = None
+    enriched: dict = field(default_factory=dict)
 
 
 def _extract_version(pattern: str, text: str) -> Optional[str]:
@@ -163,6 +165,36 @@ def _resolve_ip(hostname: str) -> str:
         return ""
 
 
+def build_service_summary(result: ScanResult) -> list[dict]:
+    summary = []
+    for tech in result.technologies:
+        summary.append({
+            "name": tech.name,
+            "category": tech.category,
+            "version": tech.version or "unknown",
+            "confidence": tech.confidence,
+            "evidence": tech.evidence,
+        })
+    return summary
+
+
+def _enrich_with_external_services(hostname: str, technology_names: list[str], api_key: Optional[str] = None) -> dict:
+    if not api_key:
+        return {}
+
+    try:
+        endpoint = os.getenv("INOUE_ENRICHMENT_URL", "https://api.technitium.com")
+        headers = {"Authorization": f"Bearer {api_key}"}
+        with httpx.Client(timeout=5, verify=False) as client:
+            response = client.get(f"{endpoint}/services/{hostname}", headers=headers)
+            if response.status_code == 200:
+                data = response.json()
+                return data if isinstance(data, dict) else {}
+    except Exception:
+        return {}
+    return {}
+
+
 def run_fingerprints(headers: dict, cookies: dict, body: str) -> list[Detection]:
     scripts = _extract_scripts(body)
     meta = _extract_meta(body)
@@ -207,7 +239,14 @@ def run_fingerprints(headers: dict, cookies: dict, body: str) -> list[Detection]
     return detections
 
 
-def scan(url: str, timeout: int = 10, follow_redirects: bool = True, dns: bool = True, ssl_check: bool = True) -> ScanResult:
+def scan(
+    url: str,
+    timeout: int = 10,
+    follow_redirects: bool = True,
+    dns: bool = True,
+    ssl_check: bool = True,
+    api_key: Optional[str] = None,
+) -> ScanResult:
     if not url.startswith(("http://", "https://")):
         url = "https://" + url
 
@@ -272,5 +311,8 @@ def scan(url: str, timeout: int = 10, follow_redirects: bool = True, dns: bool =
     if ssl_check and parsed.scheme == "https" or (result.final_url.startswith("https")):
         final_parsed = urlparse(result.final_url)
         result.ssl_info = _get_ssl_info(final_parsed.hostname or hostname)
+
+    if hostname:
+        result.enriched = _enrich_with_external_services(hostname, [tech.name for tech in result.technologies], api_key)
 
     return result

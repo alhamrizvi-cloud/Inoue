@@ -16,7 +16,7 @@ from rich.table import Table
 from rich import box
 from rich.progress import Progress, SpinnerColumn, TextColumn
 
-from core.scanner import scan, ScanResult
+from core.scanner import build_service_summary, scan, ScanResult
 
 app = typer.Typer(help="Inoue — tech stack fingerprinting CLI", add_completion=False)
 console = Console()
@@ -66,7 +66,8 @@ def render_result(result: ScanResult, verbose: bool = False, evidence: bool = Fa
         console.print(f"  [dim]server[/dim]  {result.server}")
     console.print()
 
-    if result.technologies:
+    service_summary = build_service_summary(result)
+    if service_summary:
         by_category = defaultdict(list)
         for t in result.technologies:
             by_category[t.category].append(t)
@@ -75,6 +76,7 @@ def render_result(result: ScanResult, verbose: bool = False, evidence: bool = Fa
         table.add_column("category", width=20)
         table.add_column("technology", width=22)
         table.add_column("version", width=14)
+        table.add_column("confidence", width=12)
         if evidence:
             table.add_column("evidence", width=55)
 
@@ -83,16 +85,23 @@ def render_result(result: ScanResult, verbose: bool = False, evidence: bool = Fa
             color = CATEGORY_COLORS.get(category, "white")
             for i, t in enumerate(techs):
                 cat_label = f"[dim]{category}[/dim]" if i == 0 else ""
-                ver_label = f"[dim]{t.version}[/dim]" if t.version else "[dim]—[/dim]"
-                row = [cat_label, f"[{color}]{t.name}[/{color}]", ver_label]
+                ver_label = f"[dim]{t.version or 'unknown'}[/dim]"
+                conf_label = f"[dim]{t.confidence}[/dim]"
+                row = [cat_label, f"[{color}]{t.name}[/{color}]", ver_label, conf_label]
                 if evidence:
                     row.append(f"[dim]{t.evidence[:70]}[/dim]" if t.evidence else "")
                 table.add_row(*row)
 
         console.print(table)
-        console.print(f"\n  [dim]{len(result.technologies)} technologies detected[/dim]\n")
+        console.print(f"\n  [dim]{len(service_summary)} services detected[/dim]\n")
     else:
         console.print("  [dim]no technologies detected[/dim]\n")
+
+    if verbose and result.enriched:
+        console.print("  [dim]── enrichment ─────────────────────────[/dim]")
+        for key, value in result.enriched.items():
+            console.print(f"  [cyan]{key}[/cyan]: {value}")
+        console.print()
 
     if result.ssl_info and not result.ssl_info.get("error") and verbose:
         ssl = result.ssl_info
@@ -149,6 +158,7 @@ def main(
     output: Optional[str] = typer.Option(None, "-o", "--output", help="Save JSON to file"),
     workers: int = typer.Option(5, "-w", "--workers", help="Concurrent workers"),
     no_banner: bool = typer.Option(False, "--no-banner", help="Suppress banner"),
+    api_key: Optional[str] = typer.Option(None, "--api-key", help="Optional API key for enrichment services"),
 ):
     """
     Inoue — tech stack fingerprinting CLI
@@ -167,7 +177,7 @@ def main(
     results = []
 
     def do_scan(target):
-        return scan(target, timeout=timeout, dns=not no_dns, ssl_check=not no_ssl)
+        return scan(target, timeout=timeout, dns=not no_dns, ssl_check=not no_ssl, api_key=api_key)
 
     with Progress(
         SpinnerColumn(),
