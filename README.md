@@ -1,5 +1,7 @@
 # Inoue
-<img width="1099" height="717" alt="image" src="https://github.com/user-attachments/assets/0dbb322d-781e-42bd-aae4-c3cd793d2df5" />
+
+<img width="430" height="63" alt="image" src="https://github.com/user-attachments/assets/3ebec879-7fdb-4ee4-9def-277e95b1c406" />
+
 
 Fast, open-source tech stack fingerprinting CLI — like Wappalyzer or BuiltWith, but runs in your terminal, free, and hackable.
 
