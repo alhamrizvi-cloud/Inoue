@@ -209,9 +209,10 @@ def update():
         console.print(f"[red]update failed[/red] {result['message']}")
 
 
-@app.command()
+@app.callback(invoke_without_command=True)
 def main(
-    targets: list[str] = typer.Argument(..., help="Target URLs or IPs (e.g. example.com, 10.10.11.2)"),
+    ctx: typer.Context,
+    targets: Optional[list[str]] = typer.Argument(None, help="Target URLs or IPs (e.g. example.com, 10.10.11.2)"),
     verbose: bool = typer.Option(False, "-v", "--verbose", help="Show SSL, DNS, security headers, all headers"),
     evidence: bool = typer.Option(False, "-e", "--evidence", help="Show detection evidence"),
     no_dns: bool = typer.Option(False, "--no-dns", help="Skip DNS enumeration"),
@@ -235,6 +236,13 @@ def main(
       inoue --json -o out.json site1.com site2.com\n
       inoue --no-dns -t 5 10.10.11.55\n      inoue -m full-recon https://target.example\n
     """
+    if ctx.invoked_subcommand is not None:
+        return
+
+    if not targets:
+        typer.echo("Missing target(s).", err=True)
+        raise typer.Exit(2)
+
     if not no_banner and not json_out:
         print_banner()
 
