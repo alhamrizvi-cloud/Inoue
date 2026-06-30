@@ -1,6 +1,7 @@
 import unittest
 
 from core.scanner import Detection, ScanResult, build_service_summary, run_fingerprints
+from fingerprints.signatures import SIGNATURES
 
 
 class ScannerSummaryTests(unittest.TestCase):
@@ -102,6 +103,11 @@ class ScannerSummaryTests(unittest.TestCase):
         self.assertIn("Stripe", names)
         self.assertIn("Google Analytics", names)
         self.assertIn("HubSpot", names)
+
+    def test_signature_catalog_contains_large_cloud_and_ics_catalog(self):
+        self.assertGreaterEqual(len(SIGNATURES), 650)
+        self.assertIn("OpenStack Horizon", SIGNATURES)
+        self.assertIn("ScadaBR", SIGNATURES)
 
 
 if __name__ == "__main__":

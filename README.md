@@ -13,6 +13,7 @@ Repository: https://github.com/alhamrizvi-cloud/Inoue
 ## Features
 
 - Broad fingerprint coverage for web servers, languages, frameworks, CMS, ecommerce platforms, JS libraries, analytics, payments, CDNs, WAFs, and more
+- An expanded catalog with 600+ services, cloud portals, ICS/SCADA surfaces, admin panels, network appliances, and self-hosted platforms
 - Detection from HTTP headers, cookies, HTML, script tags, meta tags, and URL paths
 - Recon-oriented service hints for exposed admin panels, management consoles, cloud portals, and self-hosted applications
 - Version-aware detection where the signature supports it
@@ -62,6 +63,9 @@ python inoue.py --no-dns -t 5 10.10.11.55
 
 # Skip SSL checks for HTTP-only or self-signed targets
 python inoue.py --no-ssl http://target.htb
+
+# Pull the latest catalog and scanner updates from the repository
+python inoue.py update
 ```
 
 For a full command reference, see [COMMANDS.md](COMMANDS.md).
@@ -113,6 +117,10 @@ Each detection is enriched with a confidence level, version hint when available,
 ## Contributing
 
 Contributions are welcome. Please see [CONTRIBUTING.md](CONTRIBUTING.md) for setup and PR guidance.
+
+## Catalog expansion and update guide
+
+A full walkthrough for extending the fingerprint catalog, adding version detection heuristics, and keeping the tool current is available in [GUIDE.md](GUIDE.md).
 
 ## Adding signatures
 

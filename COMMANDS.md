@@ -92,6 +92,12 @@ python inoue.py --no-banner <target>
 python inoue.py --api-key <key> <target>
 ```
 
+## Update the local clone from the repository
+
+```bash
+python inoue.py update
+```
+
 ## Fast HTB/CTF style scan
 
 ```bash

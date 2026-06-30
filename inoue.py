@@ -7,7 +7,10 @@ Repository: https://github.com/alhamrizvi-cloud/Inoue
 
 import json
 import concurrent.futures
+import subprocess
+import sys
 from collections import defaultdict
+from pathlib import Path
 from typing import Optional
 
 import typer
@@ -154,6 +157,26 @@ def render_result(result: ScanResult, verbose: bool = False, evidence: bool = Fa
         for k, v in result.headers.items():
             console.print(f"  [dim]{k}:[/dim] {v[:100]}")
         console.print()
+
+
+def run_self_update() -> dict:
+    repo_root = Path(__file__).resolve().parent
+    try:
+        subprocess.run(["git", "-C", str(repo_root), "fetch", "--all", "--prune"], check=True, capture_output=True, text=True)
+        subprocess.run(["git", "-C", str(repo_root), "pull", "--ff-only"], check=True, capture_output=True, text=True)
+        return {"ok": True, "message": "Repository updated successfully"}
+    except subprocess.CalledProcessError as exc:
+        return {"ok": False, "message": exc.stderr.strip() or exc.stdout.strip() or "Update failed"}
+
+
+@app.command()
+def update():
+    """Fetch the latest catalog and scanner changes from the repository."""
+    result = run_self_update()
+    if result["ok"]:
+        console.print(f"[green]updated[/green] {result['message']}")
+    else:
+        console.print(f"[red]update failed[/red] {result['message']}")
 
 
 @app.command()

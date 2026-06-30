@@ -6,6 +6,7 @@ import os
 import re
 import socket
 import ssl
+import subprocess
 import time
 from dataclasses import dataclass, field
 from typing import Optional
@@ -42,27 +43,55 @@ class ScanResult:
     enriched: dict = field(default_factory=dict)
 
 
+def _normalize_version(raw: str) -> Optional[str]:
+    value = raw.strip().strip("'\";,:/\\")
+    if not value:
+        return None
+    if value.lower().startswith(("version", "ver", "release", "build", "rev")):
+        value = value.split(None, 1)[-1]
+    value = value.replace("_", ".").replace("-", ".")
+    value = re.sub(r"[^0-9.]+", "", value)
+    return value if value.count(".") or value.isdigit() else None
+
+
 def _extract_version(pattern: str, text: str) -> Optional[str]:
     """Try to pull a version string from a regex match group 1 or from nearby version-like text."""
+    if not text:
+        return None
+
     try:
         m = re.search(pattern, text, re.IGNORECASE)
         if m:
-            try:
-                if m.lastindex:
-                    value = m.group(1)
-                    if value:
-                        return value
-            except IndexError:
-                pass
+            for idx in range(1, m.lastindex + 1 if m.lastindex else 1):
+                value = m.group(idx)
+                normalized = _normalize_version(str(value)) if value else None
+                if normalized:
+                    return normalized
+    except re.error:
+        pass
 
-        version_matches = re.findall(r'(?:v|version|ver|release)?(?:\s|=|/)?(\d+(?:[._-]?\d+){1,3})', text)
+    patterns = [
+        r'(?i)(?:v|version|ver|release|build|rev(?:ision)?)\s*[:=]?\s*(\d+(?:[._-]?\d+){1,3})',
+        r'(?i)(?:^|[^a-z0-9])(?:v|version|ver|release)\s*(\d+(?:[._-]?\d+){1,3})',
+        r'(?i)/(?:v|version|ver|release)?(?:[._-])?(\d+(?:[._-]?\d+){1,3})',
+    ]
+    for regex in patterns:
+        try:
+            matches = re.findall(regex, text)
+            if matches:
+                normalized = _normalize_version(matches[0])
+                if normalized:
+                    return normalized
+        except re.error:
+            continue
+
+    try:
+        version_matches = re.findall(r'(\d+(?:[._-]?\d+){1,3})', text)
         if version_matches:
-            return version_matches[0].replace('_', '.').replace('-', '.')
-
-        # also catch common version tokens embedded in URLs or snippets
-        url_version_matches = re.findall(r'/(?:v|version|ver|release)?(?:[._-])?(\d+(?:[._-]?\d+){1,3})', text)
-        if url_version_matches:
-            return url_version_matches[0].replace('_', '.').replace('-', '.')
+            for candidate in version_matches:
+                normalized = _normalize_version(candidate)
+                if normalized and len(normalized.split('.')) >= 2:
+                    return normalized
     except re.error:
         pass
     return None
@@ -289,6 +318,12 @@ def run_fingerprints(headers: dict, cookies: dict, body: str, url: str = "") -> 
             best_rank, best_version, best_evidence = max(candidates, key=lambda item: item[0])
             version = best_version
             evidence = best_evidence
+            for rank, candidate_version, candidate_evidence in sorted(candidates, key=lambda item: item[0], reverse=True):
+                if candidate_version:
+                    best_rank = rank
+                    version = candidate_version
+                    evidence = candidate_evidence
+                    break
 
             if best_rank >= 4:
                 confidence = "high"

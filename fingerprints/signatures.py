@@ -3,6 +3,8 @@ Tech stack fingerprint signatures.
 Each entry maps a technology to detection rules across headers, cookies, HTML, scripts, meta tags, etc.
 """
 
+from fingerprints.extended_catalog import EXTENDED_SIGNATURES
+
 SIGNATURES = {
     # --- Web Servers ---
     "Apache": {
@@ -3688,3 +3690,6 @@ SIGNATURES = {
         "category": "AI / ML",
     },
 }
+
+for name, signature in EXTENDED_SIGNATURES.items():
+    SIGNATURES.setdefault(name, signature)
