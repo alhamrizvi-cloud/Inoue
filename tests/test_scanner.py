@@ -2,6 +2,7 @@ import unittest
 
 from core.scanner import Detection, ScanResult, build_recon_plan, build_service_summary, run_fingerprints
 from fingerprints.signatures import SIGNATURES
+from inoue import format_update_report
 
 
 class ScannerSummaryTests(unittest.TestCase):
@@ -156,6 +157,20 @@ class ScannerSummaryTests(unittest.TestCase):
         self.assertFalse(plan["mail"])
         self.assertFalse(plan["ports"])
         self.assertFalse(plan["extra"])
+
+    def test_format_update_report_includes_recent_commit_details(self):
+        report = format_update_report(
+            fetch_output="From origin\n fetch completed",
+            pull_output="Already up to date.",
+            log_output="34d08b2 details\n592ed62 Create TEST",
+            latest_commit_output="34d08b2 details\n core/scanner.py",
+            changed_files_output="core/scanner.py\nREADME.md",
+            status_output="",
+        )
+
+        self.assertIn("Already up to date", report)
+        self.assertIn("Recent commits", report)
+        self.assertIn("core/scanner.py", report)
 
 
 if __name__ == "__main__":

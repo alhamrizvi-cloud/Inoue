@@ -23,6 +23,7 @@ from core.scanner import build_service_summary, scan, ScanResult
 
 app = typer.Typer(help="Inoue — tech stack fingerprinting CLI", add_completion=False)
 console = Console()
+APP_VERSION = "1.0.1"
 
 CATEGORY_COLORS = {
     "Web Server":       "cyan",
@@ -192,11 +193,28 @@ def render_result(result: ScanResult, verbose: bool = False, evidence: bool = Fa
 def run_self_update() -> dict:
     repo_root = Path(__file__).resolve().parent
     try:
-        subprocess.run(["git", "-C", str(repo_root), "fetch", "--all", "--prune"], check=True, capture_output=True, text=True)
-        subprocess.run(["git", "-C", str(repo_root), "pull", "--ff-only"], check=True, capture_output=True, text=True)
-        return {"ok": True, "message": "Repository updated successfully"}
-    except subprocess.CalledProcessError as exc:
-        return {"ok": False, "message": exc.stderr.strip() or exc.stdout.strip() or "Update failed"}
+        fetch = subprocess.run(["git", "-C", str(repo_root), "fetch", "--all", "--prune"], capture_output=True, text=True)
+        pull = subprocess.run(["git", "-C", str(repo_root), "pull", "--ff-only"], capture_output=True, text=True)
+        status = subprocess.run(["git", "-C", str(repo_root), "status", "--short"], capture_output=True, text=True)
+        recent_log = subprocess.run(["git", "-C", str(repo_root), "log", "--pretty=format:%h %s", "-5"], capture_output=True, text=True)
+        latest_commit = subprocess.run(["git", "-C", str(repo_root), "show", "--stat", "--oneline", "--decorate", "--no-renames", "HEAD"], capture_output=True, text=True)
+        changed_files = subprocess.run(["git", "-C", str(repo_root), "show", "--name-only", "--pretty=format:", "HEAD"], capture_output=True, text=True)
+        report = format_update_report(
+            fetch_output=fetch.stdout + fetch.stderr,
+            pull_output=pull.stdout + pull.stderr,
+            log_output=recent_log.stdout,
+            latest_commit_output=latest_commit.stdout,
+            changed_files_output=changed_files.stdout,
+            status_output=status.stdout,
+        )
+        ok = fetch.returncode == 0 and pull.returncode == 0
+        return {
+            "ok": ok,
+            "message": "Repository updated successfully" if ok else "Update failed",
+            "details": report,
+        }
+    except Exception as exc:
+        return {"ok": False, "message": str(exc), "details": "Unable to retrieve update details."}
 
 
 @app.command()
@@ -207,6 +225,21 @@ def update():
         console.print(f"[green]updated[/green] {result['message']}")
     else:
         console.print(f"[red]update failed[/red] {result['message']}")
+
+    if result.get("details"):
+        console.print()
+        console.print(result["details"])
+
+
+@app.command()
+def about():
+    """Show project metadata and quick usage hints."""
+    console.print(f"[bold]Inoue[/bold] [dim]v{APP_VERSION}[/dim]")
+    console.print("Repository: https://github.com/alhamrizvi-cloud/Inoue")
+    console.print("Presets: fast, full-recon, all")
+    console.print("Examples:")
+    console.print("  - python inoue.py -m fast https://target.example")
+    console.print("  - python inoue.py -m full-recon https://target.example")
 
 
 @app.callback(invoke_without_command=True)

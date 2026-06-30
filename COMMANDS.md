@@ -94,9 +94,26 @@ python inoue.py --api-key <key> <target>
 
 ## Update the local clone from the repository
 
+Fetch and apply the latest fingerprints, scanner improvements, and catalog updates:
+
 ```bash
 python inoue.py update
 ```
+
+This command:
+1. Runs `git fetch --all --prune` to pull all remote changes
+2. Runs `git pull --ff-only` to merge fast-forward updates only
+3. Displays a summary of recent commits and modified files
+4. Updates cached signatures for immediate use
+
+**What gets updated:**
+- New fingerprints in `fingerprints/signatures.py` (700+ core signatures)
+- Extended catalog entries in `fingerprints/extended_catalog.py`
+- Scanner improvements in `core/scanner.py`
+- CLI and command enhancements in `inoue.py`
+- Documentation updates in `GUIDE.md`, `CONTRIBUTING.md`, `COMMANDS.md`
+
+After running `update`, all future scans will use the new signatures and detection logic without restarting the tool.
 
 ## Fast HTB/CTF style scan
 
