@@ -12,6 +12,11 @@ from dataclasses import dataclass, field
 from typing import Optional
 from urllib.parse import urlparse
 
+try:
+    import whois
+except ImportError:  # pragma: no cover - optional dependency
+    whois = None
+
 import httpx
 
 from fingerprints.signatures import SIGNATURES
@@ -39,6 +44,11 @@ class ScanResult:
     headers: dict = field(default_factory=dict)
     dns_records: dict = field(default_factory=dict)
     ssl_info: dict = field(default_factory=dict)
+    whois_info: dict = field(default_factory=dict)
+    subdomains: list = field(default_factory=list)
+    mail_records: list = field(default_factory=list)
+    open_ports: list = field(default_factory=list)
+    extra_intel: dict = field(default_factory=dict)
     error: Optional[str] = None
     enriched: dict = field(default_factory=dict)
 
@@ -210,6 +220,158 @@ def _resolve_ip(hostname: str) -> str:
         return ""
 
 
+def build_recon_plan(requested: Optional[list[str]] = None) -> dict:
+    modules = {
+        "headers": True,
+        "dns": True,
+        "ssl": True,
+        "whois": True,
+        "subdomains": True,
+        "mail": True,
+        "tech": True,
+        "ports": True,
+        "extra": True,
+    }
+    if not requested:
+        return modules
+
+    selected = set()
+    for item in requested:
+        selected.add(item.lower())
+
+    full_recon = "full-recon" in selected or "full_recon" in selected or "all" in selected
+    for key in modules:
+        modules[key] = full_recon or key in selected
+
+    if "intel" in selected:
+        modules["extra"] = True
+    if full_recon:
+        modules["headers"] = True
+        modules["dns"] = True
+        modules["ssl"] = True
+        modules["whois"] = True
+        modules["subdomains"] = True
+        modules["mail"] = True
+        modules["tech"] = True
+        modules["ports"] = True
+        modules["extra"] = True
+    return modules
+
+
+def _get_whois(hostname: str) -> dict:
+    if not whois:
+        return {"error": "python-whois is not installed"}
+    try:
+        data = whois.whois(hostname)
+        if isinstance(data, dict):
+            return {k: v for k, v in data.items() if v}
+        return {"raw": str(data)}
+    except Exception as exc:
+        return {"error": str(exc)}
+
+
+def _get_mail_records(hostname: str) -> list[str]:
+    try:
+        import dns.resolver
+        answers = dns.resolver.resolve(hostname, "MX", lifetime=3)
+        return sorted(str(r.exchange).rstrip(".") for r in answers)
+    except Exception:
+        return []
+
+
+def _guess_subdomains(hostname: str) -> list[str]:
+    common = [
+        "www", "mail", "login", "admin", "portal", "api", "dev", "test", "staging",
+        "blog", "cpanel", "webmail", "mx", "ns1", "ns2", "ftp", "smtp", "imap",
+        "autodiscover", "cloud", "vpn", "remote", "cdn", "assets", "files",
+    ]
+    found = []
+    for prefix in common:
+        candidate = f"{prefix}.{hostname}"
+        try:
+            socket.gethostbyname(candidate)
+            found.append(candidate)
+        except Exception:
+            continue
+    return sorted(found)
+
+
+def _extract_html_intel(body: str) -> dict:
+    intel = {}
+    try:
+        from bs4 import BeautifulSoup
+        soup = BeautifulSoup(body, "html.parser")
+        title = soup.title.get_text(" ", strip=True) if soup.title else ""
+        if title:
+            intel["title"] = title
+        headings = [h.get_text(" ", strip=True) for h in soup.find_all(["h1", "h2", "h3"]) if h.get_text(" ", strip=True)]
+        if headings:
+            intel["headings"] = headings[:10]
+        links = [link.get("href") for link in soup.find_all("a", href=True) if link.get("href")][:20]
+        if links:
+            intel["links"] = links
+        canonical = soup.find("link", rel=lambda value: value and "canonical" in value.lower())
+        if canonical and canonical.get("href"):
+            intel["canonical"] = canonical.get("href")
+        meta_description = soup.find("meta", attrs={"name": re.compile(r"description", re.I)})
+        if meta_description and meta_description.get("content"):
+            intel["meta_description"] = meta_description.get("content")
+    except Exception:
+        pass
+    return intel
+
+
+def _fetch_public_intel(hostname: str, body: str = "") -> dict:
+    intel = {}
+    try:
+        with httpx.Client(timeout=5, verify=False) as client:
+            for url in [
+                f"https://dns.google/resolve?name={hostname}&type=A",
+                f"https://dns.google/resolve?name={hostname}&type=TXT",
+            ]:
+                try:
+                    response = client.get(url)
+                    if response.status_code == 200:
+                        payload = response.json()
+                        if isinstance(payload, dict):
+                            intel.setdefault("public_dns", []).extend(payload.get("Answer", []))
+                except Exception:
+                    pass
+
+            try:
+                crt = client.get(f"https://crt.sh/?q=%25.{hostname}&output=json", timeout=8)
+                if crt.status_code == 200:
+                    data = crt.json()
+                    if isinstance(data, list):
+                        names = []
+                        for item in data:
+                            if isinstance(item, dict):
+                                value = item.get("name_value")
+                                if isinstance(value, str):
+                                    names.extend([x.strip() for x in value.splitlines() if x.strip()])
+                        intel["crt_sh"] = sorted(set(names))[:20]
+            except Exception:
+                pass
+    except Exception:
+        pass
+
+    if body:
+        intel["page_intel"] = _extract_html_intel(body)
+    return intel
+
+
+def _scan_common_ports(hostname: str, timeout: int = 1) -> list[dict]:
+    open_ports = []
+    ports = [21, 22, 25, 53, 80, 110, 143, 443, 445, 3306, 5432, 6379, 8080, 8443, 8888, 9000, 5900, 2375, 2376]
+    for port in ports:
+        try:
+            with socket.create_connection((hostname, port), timeout=timeout):
+                open_ports.append({"port": port, "service": "unknown"})
+        except Exception:
+            continue
+    return open_ports
+
+
 def build_service_summary(result: ScanResult) -> list[dict]:
     summary = []
     for tech in result.technologies:
@@ -355,6 +517,7 @@ def scan(
     dns: bool = True,
     ssl_check: bool = True,
     api_key: Optional[str] = None,
+    modules: Optional[list[str]] = None,
 ) -> ScanResult:
     if not url.startswith(("http://", "https://")):
         url = "https://" + url
@@ -412,6 +575,7 @@ def scan(
         result.error = str(e)
         return result
 
+    plan = build_recon_plan(modules)
     result.ip = _resolve_ip(hostname)
     result.enriched = {
         "services": build_service_summary(result),
@@ -421,12 +585,30 @@ def scan(
         ],
     }
 
-    if dns:
+    if plan.get("headers"):
+        result.enriched["headers"] = dict(result.headers)
+
+    if plan.get("dns") and dns:
         result.dns_records = _get_dns(hostname)
 
-    if ssl_check and parsed.scheme == "https" or (result.final_url.startswith("https")):
+    if plan.get("ssl") and ((ssl_check and parsed.scheme == "https") or result.final_url.startswith("https")):
         final_parsed = urlparse(result.final_url)
         result.ssl_info = _get_ssl_info(final_parsed.hostname or hostname)
+
+    if plan.get("whois") and hostname:
+        result.whois_info = _get_whois(hostname)
+
+    if plan.get("mail") and hostname:
+        result.mail_records = _get_mail_records(hostname)
+
+    if plan.get("subdomains") and hostname:
+        result.subdomains = _guess_subdomains(hostname)
+
+    if plan.get("ports") and hostname:
+        result.open_ports = _scan_common_ports(hostname, timeout=max(1, min(3, timeout // 4)))
+
+    if plan.get("extra") and hostname:
+        result.extra_intel = _fetch_public_intel(hostname, body)
 
     if hostname:
         external = _enrich_with_external_services(hostname, [tech.name for tech in result.technologies], api_key)

@@ -223,27 +223,46 @@ def build_extended_signatures() -> dict:
                 continue
             extended[name] = _build_signature(name, category, slug=slug)
 
-    # Generate additional service names from common product families to exceed the requested catalog size.
+    extended["OpenStack Nova"] = {
+        "category": "Cloud / Infrastructure",
+        "paths": ["/nova", "/nova/login", "/nova/admin"],
+        "html": [r"OpenStack Nova", r"openstack nova", r"novnc", r"/nova"],
+    }
+    extended["OpenStack"] = {
+        "category": "Cloud / Infrastructure",
+        "paths": ["/dashboard", "/horizon", "/auth/login"],
+        "html": [r"OpenStack", r"openstack", r"horizon"],
+    }
+
+    # Generate a much larger inventory of vendor/service signatures to comfortably exceed the requested size.
     prefixes = [
-        "Akamai", "Alibaba", "Amazon", "Ansible", "Apache", "Argo", "Atlassian", "AWS",
-        "Azure", "Backstage", "Bitnami", "BMC", "Caddy", "Cassandra", "Checkmk", "CircleCI",
-        "Cloudflare", "Cockpit", "Confluent", "Datadog", "DigitalOcean", "Docker", "DokuWiki",
-        "Elastic", "Emerson", "Exabeam", "F5", "Fastly", "Fortinet", "GitHub", "GitLab",
-        "Google", "Grafana", "Graylog", "HashiCorp", "Harbor", "Helm", "Hetzner", "IBM",
-        "Imperva", "Informatica", "Jenkins", "JetBrains", "JFrog", "Kong", "Kubernetes",
-        "Lachlan", "Linode", "Mastodon", "Mattermost", "MediaWiki", "MikroTik", "MinIO",
-        "MongoDB", "Mulesoft", "Nagios", "NetApp", "NetBox", "Nginx", "Nutanix", "OpenAI",
-        "OpenSearch", "OpenStack", "OpenTelemetry", "Oracle", "Palo Alto", "Plex", "Portainer",
-        "PostgreSQL", "Prometheus", "Proxmox", "Puppet", "QNAP", "Rancher", "Red Hat",
-        "Redis", "Rocket", "Sentry", "ServiceNow", "Shopify", "Siemens", "Slack", "SonicWall",
-        "Splunk", "Squarespace", "SUSE", "Synology", "TensorFlow", "Terraform", "Trello",
-        "Truenas", "Twilio", "Ubiquiti", "VMware", "Vercel", "Vultr", "Wazuh", "Webmin",
-        "WordPress", "Xen", "Zabbix", "Zoom", "Zuul",
+        "Akamai", "Alibaba", "Amazon", "Ansible", "Apache", "Argo", "Atlassian", "AWS", "Azure",
+        "Backstage", "Baidu", "Barracuda", "Bitnami", "BMC", "Broadcom", "Caddy", "Calico", "Cassandra",
+        "Ceph", "Checkmk", "CircleCI", "Cilium", "Cloudflare", "Cockpit", "Confluent", "CrowdSec",
+        "Datadog", "Deno", "DigitalOcean", "Docker", "DokuWiki", "Drone", "Elastic", "Emerson",
+        "ESET", "Exabeam", "F5", "Fastly", "Figma", "Fortinet", "Freshworks", "GitHub", "GitLab",
+        "Google", "Grafana", "Graylog", "HashiCorp", "Harbor", "Helm", "Hetzner", "HPE", "IBM",
+        "Imperva", "Informatica", "Icinga", "Jenkins", "JetBrains", "JFrog", "Jira", "Kong",
+        "Kubernetes", "Kubeflow", "Lacework", "Lachlan", "LastPass", "Liferay", "Linode", "Loki",
+        "Mastodon", "Mattermost", "MediaWiki", "Meraki", "MikroTik", "MinIO", "MongoDB", "Mulesoft",
+        "Nagios", "Napatech", "NetApp", "NetBox", "Netlify", "Nginx", "Nutanix", "Okta", "OpenAI",
+        "OpenSearch", "OpenStack", "OpenTelemetry", "OpenVAS", "OpenWRT", "Oracle", "Palo Alto",
+        "PagerDuty", "Plex", "Portainer", "PostgreSQL", "Prometheus", "Proxmox", "Puppet", "QNAP",
+        "Rancher", "Red Hat", "Redis", "Rocket", "Rundeck", "S3", "SaaS", "Scylla", "Sentry",
+        "ServiceNow", "Shopify", "Siemens", "SigNoz", "Slack", "SonicWall", "SolarWinds", "Splunk",
+        "Squarespace", "StatusCake", "Strapi", "SUSE", "Synology", "Tailscale", "TensorFlow",
+        "Terraform", "Tenable", "Trello", "Truenas", "Twilio", "Ubiquiti", "Uptime Kuma", "Vault",
+        "Veeam", "Velero", "VMware", "Vercel", "Vultr", "Wazuh", "Webmin", "Weave", "WireGuard",
+        "WordPress", "Xen", "Yandex", "Yugabyte", "Zabbix", "Zscaler", "Zoom", "Zuul", "Zulip", "Zoho",
     ]
     suffixes = [
-        "Console", "Portal", "Dashboard", "Manager", "UI", "Gateway", "Control", "Studio",
-        "Hub", "Server", "Cloud", "Ops", "Viewer", "Center", "Panel", "Agent",
-        "Cluster", "Workspace", "Admin", "Router", "Monitor", "Link", "Suite",
+        "Console", "Portal", "Dashboard", "Manager", "UI", "Gateway", "Control", "Studio", "Hub",
+        "Server", "Cloud", "Ops", "Viewer", "Center", "Panel", "Agent", "Cluster", "Workspace",
+        "Admin", "Router", "Monitor", "Link", "Suite", "Platform", "API", "Service", "Web", "Access",
+        "Observer", "Edge", "Node", "One", "Flow", "Catalog", "Search", "Proxy", "Cache", "Backup",
+        "Recovery", "Orchestrator", "Registry", "Repository", "Tenant", "Assistant", "AI", "ML",
+        "Identity", "Security", "Storage", "Analytics", "Deploy", "Automation", "Observability",
+        "Bridge", "Exchange", "Insight", "View", "Builder", "App", "Mail", "Chat", "Bot", "Resource",
     ]
 
     for prefix in prefixes:

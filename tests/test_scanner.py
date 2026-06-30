@@ -1,6 +1,6 @@
 import unittest
 
-from core.scanner import Detection, ScanResult, build_service_summary, run_fingerprints
+from core.scanner import Detection, ScanResult, build_recon_plan, build_service_summary, run_fingerprints
 from fingerprints.signatures import SIGNATURES
 
 
@@ -105,9 +105,44 @@ class ScannerSummaryTests(unittest.TestCase):
         self.assertIn("HubSpot", names)
 
     def test_signature_catalog_contains_large_cloud_and_ics_catalog(self):
-        self.assertGreaterEqual(len(SIGNATURES), 650)
+        self.assertGreaterEqual(len(SIGNATURES), 5000)
         self.assertIn("OpenStack Horizon", SIGNATURES)
         self.assertIn("ScadaBR", SIGNATURES)
+        self.assertIn("Cloudflare Dashboard", SIGNATURES)
+        self.assertIn("Akamai Control Center", SIGNATURES)
+
+    def test_run_fingerprints_detects_broader_service_families(self):
+        headers = {}
+        body = '<html><body><h1>OpenStack Horizon</h1><script src="/static/novnc.js"></script></body></html>'
+
+        detections = run_fingerprints(headers, {}, body)
+        names = {d.name for d in detections}
+
+        self.assertIn("OpenStack Horizon", names)
+        self.assertIn("OpenStack Nova", names)
+
+    def test_build_recon_plan_supports_requested_modules(self):
+        plan = build_recon_plan(["dns", "ssl", "mail", "subdomains", "whois", "headers", "tech"])
+
+        self.assertTrue(plan["dns"])
+        self.assertTrue(plan["ssl"])
+        self.assertTrue(plan["mail"])
+        self.assertTrue(plan["subdomains"])
+        self.assertTrue(plan["whois"])
+        self.assertTrue(plan["headers"])
+        self.assertTrue(plan["tech"])
+
+    def test_build_recon_plan_supports_full_recon_preset(self):
+        plan = build_recon_plan(["full-recon"])
+
+        self.assertTrue(plan["dns"])
+        self.assertTrue(plan["ssl"])
+        self.assertTrue(plan["whois"])
+        self.assertTrue(plan["subdomains"])
+        self.assertTrue(plan["mail"])
+        self.assertTrue(plan["tech"])
+        self.assertTrue(plan["ports"])
+        self.assertTrue(plan["extra"])
 
 
 if __name__ == "__main__":

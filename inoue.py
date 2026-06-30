@@ -59,7 +59,7 @@ def print_banner():
 /_/_/ /_/\____/\__,_/\___/ """ + "[/bold white][dim]v1.0.0  tech stack fingerprinting[/dim]\n")
 
 
-def render_result(result: ScanResult, verbose: bool = False, evidence: bool = False):
+def render_result(result: ScanResult, verbose: bool = False, evidence: bool = False, modules: Optional[list[str]] = None):
     status_color = "green" if result.status_code < 300 else "yellow" if result.status_code < 400 else "red"
 
     console.print(f"  [dim]url[/dim]     {result.final_url}")
@@ -114,6 +114,36 @@ def render_result(result: ScanResult, verbose: bool = False, evidence: bool = Fa
                 console.print(f"    - {item['name']} -> {', '.join(item['service_hints'])}")
         if not services and not service_hints:
             console.print("  [dim]no enrichment data[/dim]")
+        console.print()
+
+    if result.whois_info and verbose:
+        console.print("  [dim]── whois ─────────────────────────────[/dim]")
+        for key, value in result.whois_info.items():
+            if isinstance(value, list):
+                console.print(f"  [cyan]{key}[/cyan] {', '.join(str(v) for v in value[:5])}")
+            else:
+                console.print(f"  [cyan]{key}[/cyan] {value}")
+        console.print()
+
+    if result.mail_records and verbose:
+        console.print("  [dim]── mail records ─────────────────────[/dim]")
+        for item in result.mail_records:
+            console.print(f"  [cyan]MX[/cyan] {item}")
+        console.print()
+
+    if result.subdomains and verbose:
+        console.print("  [dim]── subdomains ───────────────────────[/dim]")
+        for item in result.subdomains:
+            console.print(f"  [cyan]sub[/cyan] {item}")
+        console.print()
+
+    if result.extra_intel and verbose:
+        console.print("  [dim]── public intel ─────────────────────[/dim]")
+        for key, value in result.extra_intel.items():
+            if isinstance(value, list):
+                console.print(f"  [cyan]{key}[/cyan] {', '.join(str(v) for v in value[:8])}")
+            else:
+                console.print(f"  [cyan]{key}[/cyan] {value}")
         console.print()
 
     if result.ssl_info and not result.ssl_info.get("error") and verbose:
@@ -192,6 +222,7 @@ def main(
     workers: int = typer.Option(5, "-w", "--workers", help="Concurrent workers"),
     no_banner: bool = typer.Option(False, "--no-banner", help="Suppress banner"),
     api_key: Optional[str] = typer.Option(None, "--api-key", help="Optional API key for enrichment services"),
+    modules: Optional[list[str]] = typer.Option(None, "--module", "-m", help="Select recon modules: headers, dns, ssl, whois, subdomains, mail, tech, ports, extra, full-recon, or all"),
 ):
     """
     Inoue — tech stack fingerprinting CLI
@@ -202,7 +233,7 @@ def main(
       inoue example.com\n
       inoue -v -e https://target.htb\n
       inoue --json -o out.json site1.com site2.com\n
-      inoue --no-dns -t 5 10.10.11.55\n
+      inoue --no-dns -t 5 10.10.11.55\n      inoue -m full-recon https://target.example\n
     """
     if not no_banner and not json_out:
         print_banner()
@@ -210,7 +241,7 @@ def main(
     results = []
 
     def do_scan(target):
-        return scan(target, timeout=timeout, dns=not no_dns, ssl_check=not no_ssl, api_key=api_key)
+        return scan(target, timeout=timeout, dns=not no_dns, ssl_check=not no_ssl, api_key=api_key, modules=modules)
 
     with Progress(
         SpinnerColumn(),
@@ -268,7 +299,7 @@ def main(
         if result.error:
             console.print(f"  [red]error[/red] {result.error}\n")
             continue
-        render_result(result, verbose=verbose, evidence=evidence)
+        render_result(result, verbose=verbose, evidence=evidence, modules=modules)
 
 
 if __name__ == "__main__":

@@ -3692,4 +3692,17 @@ SIGNATURES = {
 }
 
 for name, signature in EXTENDED_SIGNATURES.items():
-    SIGNATURES.setdefault(name, signature)
+    if name in SIGNATURES:
+        current = SIGNATURES[name]
+        current.update(signature)
+        for key, value in signature.items():
+            if key in {"html", "headers", "meta", "scripts", "cookies", "paths"}:
+                existing = current.get(key)
+                if isinstance(existing, list) and isinstance(value, list):
+                    current[key] = existing + value
+                elif isinstance(existing, dict) and isinstance(value, dict):
+                    current[key] = {**existing, **value}
+                else:
+                    current[key] = value
+        continue
+    SIGNATURES[name] = signature
