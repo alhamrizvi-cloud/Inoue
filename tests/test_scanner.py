@@ -144,6 +144,19 @@ class ScannerSummaryTests(unittest.TestCase):
         self.assertTrue(plan["ports"])
         self.assertTrue(plan["extra"])
 
+    def test_build_recon_plan_supports_fast_preset(self):
+        plan = build_recon_plan(["fast"])
+
+        self.assertTrue(plan["headers"])
+        self.assertTrue(plan["tech"])
+        self.assertFalse(plan["dns"])
+        self.assertFalse(plan["ssl"])
+        self.assertFalse(plan["whois"])
+        self.assertFalse(plan["subdomains"])
+        self.assertFalse(plan["mail"])
+        self.assertFalse(plan["ports"])
+        self.assertFalse(plan["extra"])
+
 
 if __name__ == "__main__":
     unittest.main()

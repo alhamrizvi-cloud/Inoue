@@ -223,7 +223,7 @@ def main(
     workers: int = typer.Option(5, "-w", "--workers", help="Concurrent workers"),
     no_banner: bool = typer.Option(False, "--no-banner", help="Suppress banner"),
     api_key: Optional[str] = typer.Option(None, "--api-key", help="Optional API key for enrichment services"),
-    modules: Optional[list[str]] = typer.Option(None, "--module", "-m", help="Select recon modules: headers, dns, ssl, whois, subdomains, mail, tech, ports, extra, full-recon, or all"),
+    modules: Optional[list[str]] = typer.Option(None, "--module", "-m", help="Select recon modules: headers, dns, ssl, whois, subdomains, mail, tech, ports, extra, fast, full-recon, or all"),
 ):
     """
     Inoue — tech stack fingerprinting CLI
@@ -234,7 +234,7 @@ def main(
       inoue example.com\n
       inoue -v -e https://target.htb\n
       inoue --json -o out.json site1.com site2.com\n
-      inoue --no-dns -t 5 10.10.11.55\n      inoue -m full-recon https://target.example\n
+      inoue --no-dns -t 5 10.10.11.55\n      inoue -m fast https://target.example\n      inoue -m full-recon https://target.example\n
     """
     if ctx.invoked_subcommand is not None:
         return

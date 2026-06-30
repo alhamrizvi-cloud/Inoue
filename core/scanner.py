@@ -240,8 +240,22 @@ def build_recon_plan(requested: Optional[list[str]] = None) -> dict:
         selected.add(item.lower())
 
     full_recon = "full-recon" in selected or "full_recon" in selected or "all" in selected
+    fast_scan = "fast" in selected or "fast-scan" in selected or "fast_scan" in selected
     for key in modules:
         modules[key] = full_recon or key in selected
+
+    if fast_scan:
+        modules.update({
+            "headers": True,
+            "dns": False,
+            "ssl": False,
+            "whois": False,
+            "subdomains": False,
+            "mail": False,
+            "tech": True,
+            "ports": False,
+            "extra": False,
+        })
 
     if "intel" in selected:
         modules["extra"] = True
