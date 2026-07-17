@@ -119,11 +119,19 @@ def render_result(result: ScanResult, verbose: bool = False, evidence: bool = Fa
 
     if result.whois_info and verbose:
         console.print("  [dim]── whois ─────────────────────────────[/dim]")
-        for key, value in result.whois_info.items():
-            if isinstance(value, list):
-                console.print(f"  [cyan]{key}[/cyan] {', '.join(str(v) for v in value[:5])}")
-            else:
-                console.print(f"  [cyan]{key}[/cyan] {value}")
+        if result.whois_summary:
+            for key in ["domain", "company", "registrant", "country", "registrar", "creation_date", "expiration_date"]:
+                value = result.whois_summary.get(key)
+                if value:
+                    console.print(f"  [cyan]{key}[/cyan] {value}")
+            if result.whois_summary.get("nameservers"):
+                console.print(f"  [cyan]nameservers[/cyan] {', '.join(result.whois_summary['nameservers'][:6])}")
+        else:
+            for key, value in result.whois_info.items():
+                if isinstance(value, list):
+                    console.print(f"  [cyan]{key}[/cyan] {', '.join(str(v) for v in value[:5])}")
+                else:
+                    console.print(f"  [cyan]{key}[/cyan] {value}")
         console.print()
 
     if result.mail_records and verbose:
@@ -132,10 +140,18 @@ def render_result(result: ScanResult, verbose: bool = False, evidence: bool = Fa
             console.print(f"  [cyan]MX[/cyan] {item}")
         console.print()
 
-    if result.subdomains and verbose:
+    if result.subdomains:
         console.print("  [dim]── subdomains ───────────────────────[/dim]")
-        for item in result.subdomains:
+        for item in result.subdomains[:12]:
             console.print(f"  [cyan]sub[/cyan] {item}")
+        if len(result.subdomains) > 12:
+            console.print(f"  [dim]+{len(result.subdomains) - 12} more[/dim]")
+        console.print()
+
+    if result.directories:
+        console.print("  [dim]── directories ───────────────────────[/dim]")
+        for item in result.directories[:10]:
+            console.print(f"  [cyan]{item['source']}[/cyan] {item['path']} -> {item['status_code']}")
         console.print()
 
     if result.extra_intel and verbose:
@@ -188,6 +204,30 @@ def render_result(result: ScanResult, verbose: bool = False, evidence: bool = Fa
         for k, v in result.headers.items():
             console.print(f"  [dim]{k}:[/dim] {v[:100]}")
         console.print()
+
+
+def format_update_report(fetch_output: str, pull_output: str, log_output: str, latest_commit_output: str, changed_files_output: str, status_output: str) -> str:
+    lines = []
+    if fetch_output.strip():
+        lines.append(fetch_output.strip())
+    if pull_output.strip():
+        lines.append(pull_output.strip())
+    if log_output.strip():
+        lines.append("")
+        lines.append("Recent commits")
+        lines.extend(f"- {entry}" for entry in log_output.strip().splitlines() if entry.strip())
+    if latest_commit_output.strip():
+        lines.append("")
+        lines.append("Latest commit")
+        lines.extend(f"- {entry}" for entry in latest_commit_output.strip().splitlines() if entry.strip())
+    if changed_files_output.strip():
+        lines.append("")
+        lines.append("Changed files")
+        lines.extend(f"- {entry}" for entry in changed_files_output.strip().splitlines() if entry.strip())
+    if status_output.strip():
+        lines.append("")
+        lines.append(status_output.strip())
+    return "\n".join(lines).strip()
 
 
 def run_self_update() -> dict:

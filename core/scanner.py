@@ -8,6 +8,7 @@ import socket
 import ssl
 import subprocess
 import time
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from dataclasses import dataclass, field
 from typing import Optional
 from urllib.parse import urlparse
@@ -45,9 +46,11 @@ class ScanResult:
     dns_records: dict = field(default_factory=dict)
     ssl_info: dict = field(default_factory=dict)
     whois_info: dict = field(default_factory=dict)
+    whois_summary: dict = field(default_factory=dict)
     subdomains: list = field(default_factory=list)
     mail_records: list = field(default_factory=list)
     open_ports: list = field(default_factory=list)
+    directories: list = field(default_factory=list)
     extra_intel: dict = field(default_factory=dict)
     error: Optional[str] = None
     enriched: dict = field(default_factory=dict)
@@ -198,7 +201,7 @@ def _get_dns(hostname: str) -> dict:
         import dns.resolver
         for rtype in ["A", "AAAA", "MX", "NS", "TXT", "CNAME"]:
             try:
-                answers = dns.resolver.resolve(hostname, rtype, lifetime=3)
+                answers = dns.resolver.resolve(hostname, rtype, lifetime=2)
                 records[rtype] = [str(r) for r in answers]
             except Exception:
                 pass
@@ -222,17 +225,18 @@ def _resolve_ip(hostname: str) -> str:
 
 def build_recon_plan(requested: Optional[list[str]] = None) -> dict:
     modules = {
-        "headers": True,
-        "dns": True,
-        "ssl": True,
-        "whois": True,
-        "subdomains": True,
-        "mail": True,
-        "tech": True,
-        "ports": True,
-        "extra": True,
+        "headers": False,
+        "dns": False,
+        "ssl": False,
+        "whois": False,
+        "subdomains": False,
+        "mail": False,
+        "tech": False,
+        "ports": False,
+        "extra": False,
     }
     if not requested:
+        modules.update({"headers": True, "tech": True})
         return modules
 
     selected = set()
@@ -260,16 +264,64 @@ def build_recon_plan(requested: Optional[list[str]] = None) -> dict:
     if "intel" in selected:
         modules["extra"] = True
     if full_recon:
-        modules["headers"] = True
-        modules["dns"] = True
-        modules["ssl"] = True
-        modules["whois"] = True
-        modules["subdomains"] = True
-        modules["mail"] = True
-        modules["tech"] = True
-        modules["ports"] = True
-        modules["extra"] = True
+        modules.update({
+            "headers": True,
+            "dns": True,
+            "ssl": True,
+            "whois": True,
+            "subdomains": True,
+            "mail": True,
+            "tech": True,
+            "ports": True,
+            "extra": True,
+        })
     return modules
+
+
+def summarize_whois_details(whois_data: dict) -> dict:
+    def pick(*keys):
+        for key in keys:
+            value = whois_data.get(key)
+            if isinstance(value, (list, tuple, set)):
+                for item in value:
+                    if isinstance(item, str) and item.strip():
+                        return item.strip()
+            elif isinstance(value, str) and value.strip():
+                return value.strip()
+        return ""
+
+    nameservers = []
+    for value in [whois_data.get("name_servers"), whois_data.get("nameservers")]:
+        if isinstance(value, (list, tuple, set)):
+            for item in value:
+                if isinstance(item, str) and item.strip():
+                    nameservers.append(item.strip())
+        elif isinstance(value, str) and value.strip():
+            nameservers.append(value.strip())
+
+    return {
+        "domain": pick("domain_name", "domain", "domainName"),
+        "company": pick("organization", "org", "registrant_organization", "company"),
+        "registrant": pick("registrant", "registrant_name", "admin_name", "name"),
+        "country": pick("registrant_country", "country", "country_code"),
+        "registrar": pick("registrar", "registrar_name", "sponsoring_registrar"),
+        "creation_date": pick("creation_date", "created", "created_date"),
+        "expiration_date": pick("expiration_date", "expires", "expires_date"),
+        "nameservers": nameservers,
+    }
+
+
+def merge_subdomain_candidates(active: list[str], passive: list[str]) -> list[str]:
+    merged = []
+    seen = set()
+    for entry in active + passive:
+        if not isinstance(entry, str):
+            continue
+        candidate = entry.strip().lower().rstrip(".")
+        if candidate and candidate not in seen:
+            seen.add(candidate)
+            merged.append(candidate)
+    return sorted(merged)
 
 
 def _get_whois(hostname: str) -> dict:
@@ -308,6 +360,73 @@ def _guess_subdomains(hostname: str) -> list[str]:
         except Exception:
             continue
     return sorted(found)
+
+
+def _fetch_passive_subdomains(hostname: str) -> list[str]:
+    names = []
+    try:
+        with httpx.Client(timeout=3, verify=False) as client:
+            response = client.get(f"https://crt.sh/?q=%25.{hostname}&output=json", timeout=4)
+            if response.status_code == 200:
+                data = response.json()
+                if isinstance(data, list):
+                    for item in data:
+                        value = item.get("name_value") if isinstance(item, dict) else ""
+                        if isinstance(value, str):
+                            for entry in value.splitlines():
+                                entry = entry.strip()
+                                if entry and entry.endswith(hostname) and entry != hostname:
+                                    names.append(entry)
+    except Exception:
+        pass
+    return sorted(set(names))
+
+
+def discover_subdomains(hostname: str) -> list[str]:
+    active = _guess_subdomains(hostname)
+    passive = _fetch_passive_subdomains(hostname)
+    return merge_subdomain_candidates(active, passive)
+
+
+def _enumerate_directories(url: str, headers: dict, body: str, timeout: int = 2) -> list[dict]:
+    parsed = urlparse(url)
+    base = f"{parsed.scheme}://{parsed.netloc}"
+    common_paths = [
+        "/", "/admin", "/login", "/dashboard", "/api", "/wp-admin", "/phpmyadmin",
+        "/robots.txt", "/sitemap.xml", "/.well-known", "/assets", "/uploads",
+        "/backup", "/cms", "/portal", "/manager", "/health", "/metrics",
+    ]
+    matches = []
+
+    for path in common_paths:
+        candidate_url = base + path
+        try:
+            with httpx.Client(timeout=max(1, timeout), verify=False) as client:
+                response = client.get(candidate_url, headers={"User-Agent": headers.get("User-Agent", "Mozilla/5.0")}, follow_redirects=True)
+            if response.status_code < 500:
+                matches.append({
+                    "path": path,
+                    "url": str(response.url),
+                    "status_code": response.status_code,
+                    "source": "active",
+                })
+        except Exception:
+            continue
+
+    if body:
+        for href in re.findall(r'href=["\']([^"\']+)["\']', body, re.IGNORECASE):
+            if href.startswith("http"):
+                continue
+            clean = href.split("#", 1)[0].split("?", 1)[0]
+            if clean and clean.startswith("/") and clean.count("/") <= 2:
+                matches.append({"path": clean, "url": base + clean, "status_code": 0, "source": "scrape"})
+
+    seen = {}
+    for item in matches:
+        key = item["path"]
+        if key not in seen:
+            seen[key] = item
+    return sorted(seen.values(), key=lambda item: (item["source"] != "active", item["path"]))
 
 
 def _extract_html_intel(body: str) -> dict:
@@ -448,6 +567,7 @@ def run_fingerprints(headers: dict, cookies: dict, body: str, url: str = "") -> 
     meta = _extract_meta(body)
     detections = []
     path = ""
+    seen_names = set()
     if url:
         try:
             parsed = urlparse(url)
@@ -513,13 +633,39 @@ def run_fingerprints(headers: dict, cookies: dict, body: str, url: str = "") -> 
                 confidence = "low"
 
         if matched:
-            detections.append(Detection(
-                name=tech_name,
-                category=category,
-                version=version,
-                confidence=confidence,
-                evidence=evidence,
-            ))
+            if tech_name not in seen_names:
+                detections.append(Detection(
+                    name=tech_name,
+                    category=category,
+                    version=version,
+                    confidence=confidence,
+                    evidence=evidence,
+                ))
+                seen_names.add(tech_name)
+
+    if path:
+        path_matches = [
+            (r"/phpmyadmin", "phpMyAdmin", "Administration"),
+            (r"/wp-admin|/wp-login\.php", "WordPress", "CMS"),
+            (r"/jenkins", "Jenkins", "Administration"),
+            (r"/grafana", "Grafana", "Monitoring"),
+            (r"/prometheus", "Prometheus", "Monitoring"),
+            (r"/kibana", "Kibana", "Monitoring"),
+            (r"/gitlab", "GitLab", "Development"),
+            (r"/rundeck", "Rundeck", "Administration"),
+            (r"/portainer", "Portainer", "Administration"),
+            (r"/zabbix", "Zabbix", "Monitoring"),
+            (r"/cacti", "Cacti", "Monitoring"),
+        ]
+        for pattern, tech_name, category in path_matches:
+            if re.search(pattern, path, re.IGNORECASE) and tech_name not in seen_names:
+                detections.append(Detection(
+                    name=tech_name,
+                    category=category,
+                    confidence="high",
+                    evidence=f"Path: {path}",
+                ))
+                seen_names.add(tech_name)
 
     return detections
 
@@ -548,6 +694,7 @@ def scan(
     }
 
     result = ScanResult(url=url, final_url=url, status_code=0, response_time_ms=0)
+    plan = build_recon_plan(modules)
 
     try:
         t0 = time.time()
@@ -589,7 +736,6 @@ def scan(
         result.error = str(e)
         return result
 
-    plan = build_recon_plan(modules)
     result.ip = _resolve_ip(hostname)
     result.enriched = {
         "services": build_service_summary(result),
@@ -602,27 +748,61 @@ def scan(
     if plan.get("headers"):
         result.enriched["headers"] = dict(result.headers)
 
-    if plan.get("dns") and dns:
-        result.dns_records = _get_dns(hostname)
-
-    if plan.get("ssl") and ((ssl_check and parsed.scheme == "https") or result.final_url.startswith("https")):
+    recon_results = {}
+    tasks = []
+    if plan.get("dns") and dns and hostname:
+        tasks.append(("dns", lambda: _get_dns(hostname)))
+    if plan.get("ssl") and hostname and ((ssl_check and parsed.scheme == "https") or result.final_url.startswith("https")):
         final_parsed = urlparse(result.final_url)
-        result.ssl_info = _get_ssl_info(final_parsed.hostname or hostname)
+        tasks.append(("ssl", lambda: _get_ssl_info(final_parsed.hostname or hostname)))
+    if plan.get("whois") and hostname:
+        tasks.append(("whois", lambda: _get_whois(hostname)))
+    if plan.get("mail") and hostname:
+        tasks.append(("mail", lambda: _get_mail_records(hostname)))
+    if plan.get("subdomains") and hostname:
+        tasks.append(("subdomains", lambda: discover_subdomains(hostname)))
+    if plan.get("ports") and hostname:
+        tasks.append(("ports", lambda: _scan_common_ports(hostname, timeout=max(1, min(3, timeout // 4)))))
+    if plan.get("extra") and hostname:
+        tasks.append(("extra", lambda: ({
+            "directories": _enumerate_directories(result.final_url, result.headers, body, timeout=max(1, min(2, timeout // 4))),
+            "intel": _fetch_public_intel(hostname, body),
+        })))
+
+    if tasks:
+        with ThreadPoolExecutor(max_workers=min(6, len(tasks))) as executor:
+            futures = {executor.submit(fn): name for name, fn in tasks}
+            for future in as_completed(futures):
+                label = futures[future]
+                try:
+                    recon_results[label] = future.result(timeout=3)
+                except Exception:
+                    recon_results[label] = None
+
+    if plan.get("dns") and dns and hostname:
+        result.dns_records = recon_results.get("dns") or {}
+
+    if plan.get("ssl") and hostname and ((ssl_check and parsed.scheme == "https") or result.final_url.startswith("https")):
+        result.ssl_info = recon_results.get("ssl") or {}
 
     if plan.get("whois") and hostname:
-        result.whois_info = _get_whois(hostname)
+        result.whois_info = recon_results.get("whois") or {}
+        result.whois_summary = summarize_whois_details(result.whois_info)
 
     if plan.get("mail") and hostname:
-        result.mail_records = _get_mail_records(hostname)
+        result.mail_records = recon_results.get("mail") or []
 
     if plan.get("subdomains") and hostname:
-        result.subdomains = _guess_subdomains(hostname)
+        result.subdomains = recon_results.get("subdomains") or []
 
     if plan.get("ports") and hostname:
-        result.open_ports = _scan_common_ports(hostname, timeout=max(1, min(3, timeout // 4)))
+        result.open_ports = recon_results.get("ports") or []
 
     if plan.get("extra") and hostname:
-        result.extra_intel = _fetch_public_intel(hostname, body)
+        extra_payload = recon_results.get("extra") or {}
+        result.directories = extra_payload.get("directories") or []
+        result.extra_intel = extra_payload.get("intel") or {}
+        result.extra_intel.setdefault("directories", result.directories)
 
     if hostname:
         external = _enrich_with_external_services(hostname, [tech.name for tech in result.technologies], api_key)
