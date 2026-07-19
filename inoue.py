@@ -7,11 +7,12 @@ Repository: https://github.com/alhamrizvi-cloud/Inoue
 
 import json
 import concurrent.futures
+import re
 import subprocess
 import sys
 from collections import defaultdict
 from pathlib import Path
-from typing import Optional
+from typing import Callable, Optional
 
 import typer
 from rich.console import Console
@@ -23,7 +24,19 @@ from core.scanner import build_service_summary, scan, ScanResult
 
 app = typer.Typer(help="Inoue — tech stack fingerprinting CLI", add_completion=False)
 console = Console()
-APP_VERSION = "1.0.1"
+
+
+def load_app_version() -> str:
+    project_file = Path(__file__).resolve().parent / "pyproject.toml"
+    if project_file.exists():
+        text = project_file.read_text(encoding="utf-8")
+        match = re.search(r'^version\s*=\s*["\']([^"\']+)["\']', text, re.MULTILINE)
+        if match:
+            return match.group(1).strip()
+    return "1.0.1"
+
+
+APP_VERSION = load_app_version()
 
 CATEGORY_COLORS = {
     "Web Server":       "cyan",
@@ -321,8 +334,11 @@ def main(
 
     results = []
 
-    def do_scan(target):
-        return scan(target, timeout=timeout, dns=not no_dns, ssl_check=not no_ssl, api_key=api_key, modules=modules)
+    def make_progress_callback(target: str, task_id: int):
+        def callback(message: str):
+            console.log(f"[dim]{target}[/dim] {message}")
+            progress.update(task_id, description=f"  scanning {target}: {message}")
+        return callback
 
     with Progress(
         SpinnerColumn(),
@@ -331,11 +347,21 @@ def main(
         console=console,
         disable=json_out,
     ) as progress:
-        tasks_map = {}
+        tasks_map = {t: progress.add_task(f"  scanning {t}", total=None) for t in targets}
         with concurrent.futures.ThreadPoolExecutor(max_workers=workers) as executor:
-            futures = {executor.submit(do_scan, t): t for t in targets}
-            for t in targets:
-                tasks_map[t] = progress.add_task(f"  scanning {t}", total=None)
+            futures = {
+                executor.submit(
+                    scan,
+                    t,
+                    timeout,
+                    not no_dns,
+                    not no_ssl,
+                    api_key,
+                    modules,
+                    make_progress_callback(t, tasks_map[t]),
+                ): t
+                for t in targets
+            }
 
             for future in concurrent.futures.as_completed(futures):
                 target = futures[future]
