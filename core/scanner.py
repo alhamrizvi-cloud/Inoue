@@ -10,7 +10,7 @@ import subprocess
 import time
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from dataclasses import dataclass, field
-from typing import Optional
+from typing import Callable, Optional
 from urllib.parse import urlparse
 
 try:
@@ -562,7 +562,11 @@ def _enrich_with_external_services(hostname: str, technology_names: list[str], a
     return {}
 
 
-def run_fingerprints(headers: dict, cookies: dict, body: str, url: str = "") -> list[Detection]:
+def run_fingerprints(headers: dict, cookies: dict, body: str, url: str = "", progress: Optional[Callable[[str], None]] = None) -> list[Detection]:
+    def report(message: str):
+        if progress:
+            progress(message)
+
     scripts = _extract_scripts(body)
     meta = _extract_meta(body)
     detections = []
@@ -642,6 +646,7 @@ def run_fingerprints(headers: dict, cookies: dict, body: str, url: str = "") -> 
                     evidence=evidence,
                 ))
                 seen_names.add(tech_name)
+                report(f"detected {tech_name} ({category})")
 
     if path:
         path_matches = [
@@ -678,12 +683,18 @@ def scan(
     ssl_check: bool = True,
     api_key: Optional[str] = None,
     modules: Optional[list[str]] = None,
+    progress: Optional[Callable[[str], None]] = None,
 ) -> ScanResult:
+    def report(message: str):
+        if progress:
+            progress(message)
+
     if not url.startswith(("http://", "https://")):
         url = "https://" + url
 
     parsed = urlparse(url)
     hostname = parsed.hostname or ""
+    report(f"starting request to {url}")
 
     headers_to_send = {
         "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/124.0 Safari/537.36",
@@ -711,7 +722,8 @@ def scan(
         cookies = {k: v for k, v in resp.cookies.items()}
         body = resp.text
 
-        result.technologies = run_fingerprints(resp_headers, cookies, body, url=url)
+        report(f"response received {result.status_code}")
+        result.technologies = run_fingerprints(resp_headers, cookies, body, url=url, progress=progress)
 
     except httpx.ConnectError:
         # Try HTTP fallback
@@ -730,9 +742,11 @@ def scan(
             body = resp.text
             result.technologies = run_fingerprints(resp_headers, cookies, body, url=http_url)
         except Exception as e:
+            report(f"http error: {e}")
             result.error = str(e)
             return result
     except Exception as e:
+        report(f"request error: {e}")
         result.error = str(e)
         return result
 
@@ -768,6 +782,10 @@ def scan(
             "directories": _enumerate_directories(result.final_url, result.headers, body, timeout=max(1, min(2, timeout // 4))),
             "intel": _fetch_public_intel(hostname, body),
         })))
+
+    if progress and tasks:
+        for label, _ in tasks:
+            report(f"running {label} module")
 
     if tasks:
         with ThreadPoolExecutor(max_workers=min(6, len(tasks))) as executor:

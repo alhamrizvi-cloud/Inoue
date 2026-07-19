@@ -23,6 +23,7 @@ Repository: https://github.com/alhamrizvi-cloud/Inoue
 - Parallel scanning for multiple targets with configurable worker count
 - Structured JSON output for automation and reporting
 - Rich CLI output with confidence, version, and evidence hints
+- Live scan progress and discovery logging for each target
 - Extensible signature engine for quickly adding new detections
   
 <img width="797" height="733" alt="image" src="https://github.com/user-attachments/assets/e2101e22-1391-4056-a98a-d65f1a6f8a5f" />

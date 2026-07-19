@@ -70,7 +70,7 @@ def print_banner():
    (_)___  ____  __  _____ 
   / / __ \/ __ \/ / / / _ \
  / / / / / /_/ / /_/ /  __/
-/_/_/ /_/\____/\__,_/\___/ """ + "[/bold white][dim]v1.0.0  tech stack fingerprinting[/dim]\n")
+/_/_/ /_/\____/\__,_/\___/ """ + f"[/bold white][dim]v{APP_VERSION}  tech stack fingerprinting[/dim]\n")
 
 
 def render_result(result: ScanResult, verbose: bool = False, evidence: bool = False, modules: Optional[list[str]] = None):

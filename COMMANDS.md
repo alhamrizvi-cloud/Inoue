@@ -8,6 +8,8 @@ This file documents the main commands and flags supported by Inoue.
 python inoue.py <target>
 ```
 
+The CLI now shows live scan progress while each target is scanned and reports discoveries as they are identified.
+
 Examples:
 
 ```bash
