@@ -1,4 +1,7 @@
 import unittest
+from unittest.mock import patch
+
+from typer.testing import CliRunner
 
 from core.scanner import (
     Detection,
@@ -10,7 +13,7 @@ from core.scanner import (
     run_fingerprints,
 )
 from fingerprints.signatures import SIGNATURES
-from inoue import format_update_report
+from inoue import app, format_update_report
 
 
 class ScannerSummaryTests(unittest.TestCase):
@@ -178,6 +181,24 @@ class ScannerSummaryTests(unittest.TestCase):
         self.assertFalse(plan["mail"])
         self.assertFalse(plan["ports"])
         self.assertFalse(plan["extra"])
+
+    @patch("inoue.scan")
+    def test_cli_scan_passes_correct_named_arguments(self, mock_scan):
+        mock_scan.return_value = ScanResult(
+            url="https://example.com",
+            final_url="https://example.com",
+            status_code=200,
+            response_time_ms=0,
+        )
+        runner = CliRunner()
+        result = runner.invoke(app, ["-v", "-e", "example.com"], catch_exceptions=False)
+
+        self.assertEqual(result.exit_code, 0)
+        self.assertTrue(mock_scan.called)
+        _, kwargs = mock_scan.call_args
+        self.assertIn("progress", kwargs)
+        self.assertEqual(kwargs["api_key"], None)
+        self.assertEqual(kwargs["modules"], None)
 
     def test_summarize_whois_details_includes_company_and_contacts(self):
         summary = summarize_whois_details({

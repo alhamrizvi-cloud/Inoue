@@ -401,11 +401,12 @@ def main(
                     scan,
                     t,
                     timeout,
+                    True,
                     not no_dns,
                     not no_ssl,
-                    api_key,
-                    modules,
-                    make_progress_callback(t, tasks_map[t]),
+                    api_key=api_key,
+                    modules=modules,
+                    progress=make_progress_callback(t, tasks_map[t]),
                 ): t
                 for t in targets
             }

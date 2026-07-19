@@ -158,7 +158,7 @@ def _match_scripts(sig: dict, scripts: list[str]) -> tuple[bool, Optional[str], 
                 except IndexError:
                     pass
                 if not version:
-                    version = _extract_version(pattern, src)
+                    version = _extract_version(pattern.pattern if hasattr(pattern, "pattern") else str(pattern), src)
                 return True, version, f"Script: {src[:80]}"
     return False, None, ""
 
@@ -572,8 +572,36 @@ def _enrich_with_external_services(hostname: str, technology_names: list[str], a
 
 
 def _tokenize_text(value: str, min_length: int = 4) -> set[str]:
-    tokens = re.split(r"[^A-Za-z0-9_./-]", value.lower())
-    return {token for token in tokens if len(token) >= min_length}
+    tokens = set()
+    text = value.lower()
+    for token in re.split(r"[^a-z0-9_./:-]+", text):
+        if not token:
+            continue
+        if len(token) >= min_length:
+            tokens.add(token)
+
+        stripped = re.sub(r'^(https?:)?//', '', token)
+        if len(stripped) >= min_length:
+            tokens.add(stripped)
+
+        parts = re.split(r"[./:-]+", token)
+        for subtoken in parts:
+            if len(subtoken) >= min_length:
+                tokens.add(subtoken)
+
+        stripped_parts = re.split(r"[./:-]+", stripped)
+        for subtoken in stripped_parts:
+            if len(subtoken) >= min_length:
+                tokens.add(subtoken)
+
+        if "." in stripped:
+            host = stripped.split("/", 1)[0]
+            segments = host.split(".")
+            for idx in range(len(segments) - 1):
+                suffix = ".".join(segments[idx:])
+                if len(suffix) >= min_length:
+                    tokens.add(suffix)
+    return tokens
 
 
 def _collect_candidate_signatures(
