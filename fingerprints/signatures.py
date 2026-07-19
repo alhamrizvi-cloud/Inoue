@@ -3,6 +3,10 @@ Tech stack fingerprint signatures.
 Each entry maps a technology to detection rules across headers, cookies, HTML, scripts, meta tags, etc.
 """
 
+import re
+from re import Pattern
+from typing import Any
+
 from fingerprints.extended_catalog import EXTENDED_SIGNATURES
 
 SIGNATURES = {
@@ -3706,3 +3710,62 @@ for name, signature in EXTENDED_SIGNATURES.items():
                     current[key] = value
         continue
     SIGNATURES[name] = signature
+
+
+def _compile_pattern(value: Any) -> Any:
+    if isinstance(value, str):
+        try:
+            return re.compile(value, re.IGNORECASE)
+        except re.error:
+            return re.compile(re.escape(value), re.IGNORECASE)
+    if isinstance(value, list):
+        return [_compile_pattern(v) for v in value if isinstance(v, (str, re.Pattern))]
+    if isinstance(value, dict):
+        return {k: _compile_pattern(v) for k, v in value.items()}
+    return value
+
+
+def _extract_literals(pattern: str) -> set[str]:
+    raw = pattern
+    if not isinstance(raw, str):
+        raw = str(raw)
+    tokens = re.split(r"[^A-Za-z0-9_./-]", raw)
+    return {token.lower() for token in tokens if len(token) >= 3}
+
+
+def _compile_signature(signature: dict) -> dict:
+    compiled = {}
+    for key, value in signature.items():
+        if key in {"headers", "cookies", "html", "scripts", "meta", "paths"}:
+            compiled[key] = _compile_pattern(value)
+        else:
+            compiled[key] = value
+    return compiled
+
+
+COMPILED_SIGNATURES = {name: _compile_signature(sig) for name, sig in SIGNATURES.items()}
+
+SIGNATURES_BY_HEADER: dict[str, list[str]] = {}
+SIGNATURES_BY_META: dict[str, list[str]] = {}
+SIGNATURES_BY_COOKIE_TOKEN: dict[str, list[str]] = {}
+SIGNATURES_BY_SCRIPT_TOKEN: dict[str, list[str]] = {}
+SIGNATURES_BY_HTML_TOKEN: dict[str, list[str]] = {}
+SIGNATURES_BY_PATH_TOKEN: dict[str, list[str]] = {}
+
+for name, sig in COMPILED_SIGNATURES.items():
+    for header_name in sig.get("headers", {}):
+        SIGNATURES_BY_HEADER.setdefault(header_name.lower(), []).append(name)
+    for meta_name in sig.get("meta", {}):
+        SIGNATURES_BY_META.setdefault(meta_name.lower(), []).append(name)
+    for cookie_pattern in sig.get("cookies", []):
+        for token in _extract_literals(cookie_pattern.pattern if hasattr(cookie_pattern, "pattern") else str(cookie_pattern)):
+            SIGNATURES_BY_COOKIE_TOKEN.setdefault(token, []).append(name)
+    for script_pattern in sig.get("scripts", []):
+        for token in _extract_literals(script_pattern.pattern if hasattr(script_pattern, "pattern") else str(script_pattern)):
+            SIGNATURES_BY_SCRIPT_TOKEN.setdefault(token, []).append(name)
+    for html_pattern in sig.get("html", []):
+        for token in _extract_literals(html_pattern.pattern if hasattr(html_pattern, "pattern") else str(html_pattern)):
+            SIGNATURES_BY_HTML_TOKEN.setdefault(token, []).append(name)
+    for path_pattern in sig.get("paths", []):
+        for token in _extract_literals(path_pattern.pattern if hasattr(path_pattern, "pattern") else str(path_pattern)):
+            SIGNATURES_BY_PATH_TOKEN.setdefault(token, []).append(name)

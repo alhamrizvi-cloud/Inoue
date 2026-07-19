@@ -20,7 +20,16 @@ except ImportError:  # pragma: no cover - optional dependency
 
 import httpx
 
-from fingerprints.signatures import SIGNATURES
+from fingerprints.signatures import (
+    COMPILED_SIGNATURES,
+    SIGNATURES,
+    SIGNATURES_BY_HEADER,
+    SIGNATURES_BY_META,
+    SIGNATURES_BY_COOKIE_TOKEN,
+    SIGNATURES_BY_SCRIPT_TOKEN,
+    SIGNATURES_BY_HTML_TOKEN,
+    SIGNATURES_BY_PATH_TOKEN,
+)
 
 
 
@@ -114,8 +123,8 @@ def _match_headers(sig: dict, headers: dict) -> tuple[bool, Optional[str], str]:
     """Returns (matched, version, evidence)."""
     for header_name, pattern in sig.get("headers", {}).items():
         val = headers.get(header_name, "") or headers.get(header_name.lower(), "")
-        if val and re.search(pattern, val, re.IGNORECASE):
-            version = _extract_version(pattern, val)
+        if val and pattern.search(val):
+            version = _extract_version(pattern.pattern if hasattr(pattern, "pattern") else str(pattern), val)
             return True, version, f"{header_name}: {val[:80]}"
     return False, None, ""
 
@@ -123,17 +132,17 @@ def _match_headers(sig: dict, headers: dict) -> tuple[bool, Optional[str], str]:
 def _match_cookies(sig: dict, cookies: dict) -> tuple[bool, str]:
     for pattern in sig.get("cookies", []):
         for cookie_name in cookies:
-            if re.search(pattern, cookie_name, re.IGNORECASE):
+            if pattern.search(cookie_name):
                 return True, f"Cookie: {cookie_name}"
     return False, ""
 
 
 def _match_html(sig: dict, body: str) -> tuple[bool, Optional[str], str]:
     for pattern in sig.get("html", []):
-        m = re.search(pattern, body, re.IGNORECASE)
+        m = pattern.search(body)
         if m:
             snippet = body[max(0, m.start()-20):m.end()+20].strip().replace("\n", " ")
-            version = _extract_version(pattern, body[m.start():m.end() + 80])
+            version = _extract_version(pattern.pattern if hasattr(pattern, "pattern") else str(pattern), body[m.start():m.end() + 80])
             return True, version, f"HTML: …{snippet[:60]}…"
     return False, None, ""
 
@@ -141,7 +150,7 @@ def _match_html(sig: dict, body: str) -> tuple[bool, Optional[str], str]:
 def _match_scripts(sig: dict, scripts: list[str]) -> tuple[bool, Optional[str], str]:
     for pattern in sig.get("scripts", []):
         for src in scripts:
-            m = re.search(pattern, src, re.IGNORECASE)
+            m = pattern.search(src)
             if m:
                 version = None
                 try:
@@ -157,8 +166,8 @@ def _match_scripts(sig: dict, scripts: list[str]) -> tuple[bool, Optional[str], 
 def _match_meta(sig: dict, meta: dict) -> tuple[bool, Optional[str], str]:
     for meta_name, pattern in sig.get("meta", {}).items():
         val = meta.get(meta_name, "")
-        if val and re.search(pattern, val, re.IGNORECASE):
-            version = _extract_version(pattern, val)
+        if val and pattern.search(val):
+            version = _extract_version(pattern.pattern if hasattr(pattern, "pattern") else str(pattern), val)
             return True, version, f"Meta {meta_name}: {val[:60]}"
     return False, None, ""
 
@@ -562,6 +571,39 @@ def _enrich_with_external_services(hostname: str, technology_names: list[str], a
     return {}
 
 
+def _tokenize_text(value: str, min_length: int = 4) -> set[str]:
+    tokens = re.split(r"[^A-Za-z0-9_./-]", value.lower())
+    return {token for token in tokens if len(token) >= min_length}
+
+
+def _collect_candidate_signatures(
+    headers: dict,
+    meta: dict,
+    cookies: dict,
+    scripts: list[str],
+    body: str,
+    path: str,
+) -> set[str]:
+    candidates: set[str] = set()
+
+    for header_name in headers:
+        candidates.update(SIGNATURES_BY_HEADER.get(header_name.lower(), []))
+    for meta_name in meta:
+        candidates.update(SIGNATURES_BY_META.get(meta_name.lower(), []))
+    for cookie_name in cookies:
+        for token in _tokenize_text(cookie_name):
+            candidates.update(SIGNATURES_BY_COOKIE_TOKEN.get(token, []))
+    for script_src in scripts:
+        for token in _tokenize_text(script_src):
+            candidates.update(SIGNATURES_BY_SCRIPT_TOKEN.get(token, []))
+    for token in _tokenize_text(body):
+        candidates.update(SIGNATURES_BY_HTML_TOKEN.get(token, []))
+    for token in _tokenize_text(path):
+        candidates.update(SIGNATURES_BY_PATH_TOKEN.get(token, []))
+
+    return candidates
+
+
 def run_fingerprints(headers: dict, cookies: dict, body: str, url: str = "", progress: Optional[Callable[[str], None]] = None) -> list[Detection]:
     def report(message: str):
         if progress:
@@ -579,7 +621,18 @@ def run_fingerprints(headers: dict, cookies: dict, body: str, url: str = "", pro
         except Exception:
             path = ""
 
-    for tech_name, sig in SIGNATURES.items():
+    report("starting fingerprint matching")
+    candidate_names = _collect_candidate_signatures(headers, meta, cookies, scripts, body, path)
+    if not candidate_names:
+        report("no strong signature tokens found; evaluating full signature list")
+        candidate_names = set(COMPILED_SIGNATURES)
+    else:
+        report(f"filtered to {len(candidate_names)} likely signatures")
+
+    for tech_name in sorted(candidate_names):
+        sig = COMPILED_SIGNATURES.get(tech_name)
+        if not sig:
+            continue
         category = sig.get("category", "Other")
         matched = False
         version = None
@@ -609,7 +662,7 @@ def run_fingerprints(headers: dict, cookies: dict, body: str, url: str = "", pro
 
         if path:
             for pattern in sig.get("paths", []):
-                if re.search(pattern, path, re.IGNORECASE):
+                if pattern.search(path):
                     candidates.append((0, None, f"Path: {path}"))
                     break
 
@@ -647,6 +700,7 @@ def run_fingerprints(headers: dict, cookies: dict, body: str, url: str = "", pro
                 ))
                 seen_names.add(tech_name)
                 report(f"detected {tech_name} ({category})")
+    report(f"fingerprint matching complete ({len(detections)} detections)")
 
     if path:
         path_matches = [
@@ -783,6 +837,9 @@ def scan(
             "directories": _enumerate_directories(result.final_url, result.headers, body, timeout=max(1, min(2, timeout // 4))),
             "intel": _fetch_public_intel(hostname, body),
         })))
+
+    if progress and tasks:
+        report(f"enqueueing {len(tasks)} recon tasks")
 
     if progress and tasks:
         for label, _ in tasks:
