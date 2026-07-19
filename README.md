@@ -79,6 +79,18 @@ For a full command reference, see [COMMANDS.md](COMMANDS.md).
 | `-e, --evidence` | Show the evidence that triggered each detection |
 | `--no-dns` | Skip DNS enumeration |
 | `--no-ssl` | Skip SSL/TLS inspection |
+| `--service` | Run service/technology fingerprint detection only |
+| `--headers` | Enable header-based detection |
+| `--dns` | Enable DNS enumeration |
+| `--ssl` | Enable SSL inspection |
+| `--whois` | Enable whois lookup |
+| `--subdomains` | Enable subdomain enumeration |
+| `--mail` | Enable mail record lookup |
+| `--ports` | Enable common port scanning |
+| `--extra` | Enable extra reconnaissance intelligence |
+| `--fast` | Fast scan preset (headers + tech) |
+| `--full-recon` | Full recon preset |
+| `--all` | Enable all recon modules |
 | `-t, --timeout` | HTTP timeout in seconds (default: 10) |
 | `-w, --workers` | Concurrent scan threads (default: 5) |
 | `--json` | Output results as JSON |

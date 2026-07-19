@@ -740,7 +740,8 @@ def scan(
             result.server = resp_headers.get("server", "")
             cookies = {k: v for k, v in resp.cookies.items()}
             body = resp.text
-            result.technologies = run_fingerprints(resp_headers, cookies, body, url=http_url)
+            report(f"response received {result.status_code}")
+            result.technologies = run_fingerprints(resp_headers, cookies, body, url=http_url, progress=progress)
         except Exception as e:
             report(f"http error: {e}")
             result.error = str(e)

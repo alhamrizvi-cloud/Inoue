@@ -310,6 +310,18 @@ def main(
     no_banner: bool = typer.Option(False, "--no-banner", help="Suppress banner"),
     api_key: Optional[str] = typer.Option(None, "--api-key", help="Optional API key for enrichment services"),
     modules: Optional[list[str]] = typer.Option(None, "--module", "-m", help="Select recon modules: headers, dns, ssl, whois, subdomains, mail, tech, ports, extra, fast, full-recon, or all"),
+    service: bool = typer.Option(False, "--service", help="Run service/technology fingerprint detection only"),
+    headers: bool = typer.Option(False, "--headers", help="Enable header-based detection"),
+    dns: bool = typer.Option(False, "--dns", help="Enable DNS enumeration"),
+    ssl: bool = typer.Option(False, "--ssl", help="Enable SSL inspection"),
+    whois: bool = typer.Option(False, "--whois", help="Enable whois lookup"),
+    subdomains: bool = typer.Option(False, "--subdomains", help="Enable subdomain enumeration"),
+    mail: bool = typer.Option(False, "--mail", help="Enable mail record lookup"),
+    ports: bool = typer.Option(False, "--ports", help="Enable common port scanning"),
+    extra: bool = typer.Option(False, "--extra", help="Enable extra reconnaissance intelligence"),
+    fast: bool = typer.Option(False, "--fast", help="Fast scan preset (headers + tech)"),
+    full_recon: bool = typer.Option(False, "--full-recon", help="Full recon preset"),
+    all_modules: bool = typer.Option(False, "--all", help="Enable all recon modules"),
 ):
     """
     Inoue — tech stack fingerprinting CLI
@@ -331,6 +343,41 @@ def main(
 
     if not no_banner and not json_out:
         print_banner()
+
+    if any([service, headers, dns, ssl, whois, subdomains, mail, ports, extra, fast, full_recon, all_modules]) and modules is None:
+        modules = []
+    if modules is not None:
+        modules = [m.lower() for m in modules]
+    else:
+        modules = []
+
+    if service:
+        modules.append("tech")
+    if headers:
+        modules.append("headers")
+    if dns:
+        modules.append("dns")
+    if ssl:
+        modules.append("ssl")
+    if whois:
+        modules.append("whois")
+    if subdomains:
+        modules.append("subdomains")
+    if mail:
+        modules.append("mail")
+    if ports:
+        modules.append("ports")
+    if extra:
+        modules.append("extra")
+    if fast:
+        modules.append("fast")
+    if full_recon:
+        modules.append("full-recon")
+    if all_modules:
+        modules.append("all")
+
+    if modules == []:
+        modules = None
 
     results = []
 

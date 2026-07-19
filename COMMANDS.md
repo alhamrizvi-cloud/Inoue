@@ -18,6 +18,102 @@ python inoue.py https://target.example
 python inoue.py 10.10.10.10
 ```
 
+## Service-only scan
+
+```bash
+python inoue.py --service <target>
+```
+
+Detects only services and technologies exposed by the target.
+
+## Header-based scan
+
+```bash
+python inoue.py --headers <target>
+```
+
+Run only header-based fingerprint detection.
+
+## DNS enumeration
+
+```bash
+python inoue.py --dns <target>
+```
+
+Enable DNS lookup for the target.
+
+## SSL inspection
+
+```bash
+python inoue.py --ssl <target>
+```
+
+Enable SSL/TLS inspection for the target.
+
+## Whois lookup
+
+```bash
+python inoue.py --whois <target>
+```
+
+Perform a whois lookup for the target domain.
+
+## Subdomain enumeration
+
+```bash
+python inoue.py --subdomains <target>
+```
+
+Collect discovered subdomains for the target.
+
+## Mail record lookup
+
+```bash
+python inoue.py --mail <target>
+```
+
+Query MX records for the target.
+
+## Common port scan
+
+```bash
+python inoue.py --ports <target>
+```
+
+Scan common ports on the target host.
+
+## Extra reconnaissance intelligence
+
+```bash
+python inoue.py --extra <target>
+```
+
+Enable additional public intelligence and directory enumeration.
+
+## Fast preset
+
+```bash
+python inoue.py --fast <target>
+```
+
+Run a quick scan using only headers and technology detection.
+
+## Full recon preset
+
+```bash
+python inoue.py --full-recon <target>
+```
+
+Run a full recon-style scan with all enabled modules.
+
+## All modules
+
+```bash
+python inoue.py --all <target>
+```
+
+Enable every recon and detection module.
+
 ## Verbose output
 
 ```bash
